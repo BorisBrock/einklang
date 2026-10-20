@@ -43,8 +43,38 @@ document.addEventListener("DOMContentLoaded", () => {
   const connectBtn = document.getElementById("connect-btn");
   const cancelBtn  = document.getElementById("connect-cancel-btn");
   const errorEl    = document.getElementById("connect-error");
+  const titleEl    = document.getElementById("add-room-title");
 
   if (!dialog) return;
+
+  // Opens the dialog. With an address the server fields are prefilled and
+  // locked ("add a room to this server"); without one it is the plain
+  // connect-to-anything dialog.
+  // opts: { address, port, room, needsPassword }
+  window.openAddRoomDialog = (opts = {}) => {
+    const locked = opts.address !== undefined;
+
+    serverEl.readOnly = locked;
+    portEl.readOnly   = locked;
+    if (locked) {
+      serverEl.value     = opts.address;
+      portEl.value       = String(opts.port);
+      roomEl.value       = opts.room || "";
+      passwordEl.value   = "";
+      titleEl.textContent = "Add Room to " + opts.address;
+    } else {
+      titleEl.textContent = "Connect to a Chat Room";
+    }
+
+    window.showModal("add-room-dialog");
+    validate();
+
+    // Put the cursor in the first field that still needs input
+    const focusEl = !locked ? serverEl
+                  : (opts.room && opts.needsPassword) ? passwordEl
+                  : roomEl;
+    focusEl.focus();
+  };
 
   // --- Validation: enable Connect only when required fields are non-empty ---
   function validate() {
@@ -65,8 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (dialog.open) {
       errorEl.style.display = "none";
       errorEl.textContent = "";
-      connectBtn.disabled = true;
       connectBtn.textContent = "Connect";
+      validate();
     }
   });
 

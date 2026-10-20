@@ -315,10 +315,11 @@ std::string WebViewModel::BuildServerStatusJson(const std::string& address, uint
   {
     if (i > 0)
       rooms += ",";
-    rooms += std::format(R"({{"name":"{}","userCount":{},"maxUsers":{}}})",
+    rooms += std::format(R"({{"name":"{}","userCount":{},"maxUsers":{},"hasPassword":{}}})",
                          JsUtils::EscapeString(status.rooms[i].name),
                          status.rooms[i].userCount,
-                         status.rooms[i].maxUsers);
+                         status.rooms[i].maxUsers,
+                         status.rooms[i].hasPassword ? "true" : "false");
   }
   rooms += "]";
 

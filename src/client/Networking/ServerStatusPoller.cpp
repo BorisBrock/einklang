@@ -202,7 +202,8 @@ ServerStatusPoller::PollOnce(const std::vector<ServerKey>& servers)
       {
         if (room == nullptr || room->name() == nullptr)
           continue;
-        status.rooms.push_back({room->name()->str(), room->user_count(), room->max_users()});
+        status.rooms.push_back({room->name()->str(), room->user_count(), room->max_users(),
+                                 room->has_password()});
       }
     }
 

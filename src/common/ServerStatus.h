@@ -12,6 +12,7 @@ struct RoomStatus
   std::string   name;
   std::uint16_t userCount{0};
   std::uint16_t maxUsers{0};
+  bool          hasPassword{false};
 
   bool operator==(const RoomStatus&) const = default;
 };

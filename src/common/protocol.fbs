@@ -73,6 +73,7 @@ table RoomStatus {
   name:string;
   user_count:uint16;
   max_users:uint16;
+  has_password:bool;
 }
 
 // Payload of a status query reply

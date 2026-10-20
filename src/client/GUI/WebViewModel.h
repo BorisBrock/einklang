@@ -89,7 +89,7 @@ public:
   std::string GetServerStatusesJson() const;
 
   // Serialises one server's status as a JSON object:
-  // {"address","port","online","serverVersion","rooms":[{"name","userCount","maxUsers"}]}
+  // {"address","port","online","serverVersion","rooms":[{"name","userCount","maxUsers","hasPassword"}]}
   static std::string BuildServerStatusJson(const std::string& address, uint16_t port,
                                            const ServerStatus& status);
 

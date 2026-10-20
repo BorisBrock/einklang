@@ -365,7 +365,8 @@ std::vector<std::uint8_t> ServerPacketFactory::BuildServerStatus(const std::vect
         builder,
         room.Name().c_str(),
         static_cast<std::uint16_t>(std::min<std::size_t>(room.UserCount(), UINT16_MAX)),
-        room.MaxUsers()));
+        room.MaxUsers(),
+        !room.Password().empty()));
     }
 
     const auto payload = Einklang::CreateServerStatusDirect(builder, EINKLANG_VERSION_STRING, &entries);

@@ -535,6 +535,41 @@ body {
   cursor: help;
 }
 
+/* "+" on the server header: only shown while the card is hovered/focused */
+.server-add-room {
+  flex-shrink: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 !important;
+  margin: 0 0 0 auto !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition), color var(--transition);
+}
+
+.server-card:hover .server-add-room,
+.server-card:focus-within .server-add-room {
+  opacity: 1;
+}
+
+.server-add-room:hover,
+.server-add-room:focus-visible {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.server-add-room + .server-status {
+  margin-left: 0;
+}
+
 .server-status.online {
   background: var(--success);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent);
@@ -1071,6 +1106,116 @@ body {
   color: var(--text);
 }
 
+/* ----- Room picker (add a room to an existing server) ----- */
+
+#room-picker {
+  position: fixed;
+  z-index: 9999;
+  width: 15rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 0.3rem;
+}
+
+.room-picker-heading {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.6rem 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-picker-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 0.3rem 0.6rem 0.45rem;
+}
+
+#room-picker .room-picker-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.42rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: normal;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+#room-picker .room-picker-item:hover:not([disabled]),
+#room-picker .room-picker-item:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+
+#room-picker .room-picker-item[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.room-picker-lock {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.room-picker-count {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+#room-picker .room-picker-manual {
+  color: var(--text-muted);
+}
+
+.room-picker-sep {
+  height: 1px;
+  margin: 0.25rem 0.3rem;
+  background: var(--border);
+}
+
+.room-picker-password {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.1rem 0 0.3rem;
+  padding: 0 0.3rem;
+}
+
+#room-picker .room-picker-password input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+}
+
+#room-picker .room-picker-password button {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+}
+
 .ctx-menu-item--danger {
   color: var(--danger);
 }
@@ -1223,6 +1368,13 @@ dialog article footer button {
 
 .dlg-col--narrow {
   flex: 0 0 6.5rem;
+}
+
+/* Server fields locked when adding a room to a known server */
+dialog input[readonly] {
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  cursor: default;
 }
 
 .dlg-col input {

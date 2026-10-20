@@ -188,6 +188,19 @@ function _buildServerCard(address, port, roomNames) {
   serverLabel.textContent = address;
   title.appendChild(serverLabel);
 
+  // "+" to add another room of this server (visible on hover / focus)
+  const addBtn = document.createElement("button");
+  addBtn.type      = "button";
+  addBtn.className = "server-add-room";
+  addBtn.title     = "Add room on this server";
+  addBtn.setAttribute("aria-label", "Add room on " + address);
+  addBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>';
+  addBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _openAddRoom(card);
+  });
+  title.appendChild(addBtn);
+
   // Online/offline indicator (filled in by _applyServerStatus)
   const statusDot = document.createElement("span");
   statusDot.className = "server-status";
@@ -425,6 +438,10 @@ const _CTX_ICON_REMOVE =
   '<line x1="18" y1="6" x2="6" y2="18"/>' +
   '<line x1="6" y1="6" x2="18" y2="18"/>';
 
+const _CTX_ICON_ADD =
+  '<line x1="12" y1="5" x2="12" y2="19"/>' +
+  '<line x1="5" y1="12" x2="19" y2="12"/>';
+
 const _CTX_ICON_EDIT =
   '<path d="M12 20h9"/>' +
   '<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
@@ -536,6 +553,10 @@ document.addEventListener("contextmenu", (e) => {
 
     _showContextMenu(e.pageX, e.pageY, [
       {
+        label: "Add Room\u2026", icon: _CTX_ICON_ADD,
+        callback: () => _openAddRoom(card),
+      },
+      {
         label: "Edit Server", icon: _CTX_ICON_EDIT,
         callback: () => openEditServerDialog(address, port),
       },
@@ -554,9 +575,201 @@ document.addEventListener("contextmenu", (e) => {
   }
 });
 
-// Close context menu when clicking anywhere else
+// Close context menu / room picker when clicking anywhere else
 document.addEventListener("click", (e) => {
   if (_ctxMenu && !_ctxMenu.contains(e.target)) {
     _hideContextMenu();
   }
+  if (_roomPicker && !_roomPicker.contains(e.target)) {
+    _hideRoomPicker();
+  }
 });
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") _hideRoomPicker();
+});
+
+// ---------------------------------------------------------------------------
+// Adding a room to an existing server
+// ---------------------------------------------------------------------------
+
+let _roomPicker = null;
+
+const _PICKER_ICON_LOCK =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+const _PICKER_ICON_EDIT =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
+// Entry point for the server card's "+" button and "Add Room…" menu entry.
+// Online servers get a picker of the rooms they offer; otherwise the connect
+// dialog opens with the server prefilled.
+function _openAddRoom(card) {
+  const key      = card.dataset.serverKey;
+  const colonIdx = key.lastIndexOf(":");
+  const address  = key.slice(0, colonIdx);
+  const port     = parseInt(key.slice(colonIdx + 1), 10);
+  const status   = _serverStatus.get(key);
+
+  if (!status || !status.online) {
+    window.openAddRoomDialog({ address, port });
+    return;
+  }
+
+  const added = new Set(
+    Array.from(card.querySelectorAll(".room-item")).map((el) => el.dataset.room)
+  );
+  const available = status.rooms.filter((r) => !added.has(r.name));
+
+  _showRoomPicker(card.querySelector(".server-card-title"), address, port, available);
+}
+
+function _showRoomPicker(anchor, address, port, rooms) {
+  _hideRoomPicker();
+
+  const picker = document.createElement("div");
+  picker.id = "room-picker";
+  picker.setAttribute("role", "menu");
+
+  const heading = document.createElement("div");
+  heading.className = "room-picker-heading";
+  heading.textContent = "Rooms on " + address;
+  picker.appendChild(heading);
+
+  if (rooms.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "room-picker-empty";
+    empty.textContent = "You've added all rooms on this server.";
+    picker.appendChild(empty);
+  }
+
+  for (const room of rooms) {
+    picker.appendChild(_makePickerRoom(picker, address, port, room));
+  }
+
+  const sep = document.createElement("div");
+  sep.className = "room-picker-sep";
+  picker.appendChild(sep);
+
+  const manual = document.createElement("button");
+  manual.type = "button";
+  manual.className = "room-picker-item room-picker-manual";
+  manual.innerHTML = _PICKER_ICON_EDIT;
+  const manualLabel = document.createElement("span");
+  manualLabel.textContent = "Enter room name\u2026";
+  manual.appendChild(manualLabel);
+  manual.addEventListener("click", (e) => {
+    e.stopPropagation();
+    _hideRoomPicker();
+    window.openAddRoomDialog({ address, port });
+  });
+  picker.appendChild(manual);
+
+  document.body.appendChild(picker);
+  _roomPicker = picker;
+
+  // Below the server header, kept inside the viewport
+  const rect   = anchor.getBoundingClientRect();
+  const width  = picker.offsetWidth;
+  const height = picker.offsetHeight;
+  const left   = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+  let   top    = rect.bottom + 4;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 4);
+  picker.style.left = left + "px";
+  picker.style.top  = top + "px";
+
+  const first = picker.querySelector(".room-picker-item:not([disabled])");
+  if (first) first.focus();
+}
+
+// One selectable room in the picker
+function _makePickerRoom(picker, address, port, room) {
+  const full = room.maxUsers > 0 && room.userCount >= room.maxUsers;
+
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = "room-picker-item";
+  item.disabled = full;
+
+  const name = document.createElement("span");
+  name.className = "room-name";
+  name.textContent = room.name;
+  item.appendChild(name);
+
+  if (room.hasPassword) {
+    const lock = document.createElement("span");
+    lock.className = "room-picker-lock";
+    lock.title = "Password required";
+    lock.innerHTML = _PICKER_ICON_LOCK;
+    item.appendChild(lock);
+  }
+
+  const count = document.createElement("span");
+  count.className = "room-picker-count";
+  count.textContent = full ? "Full"
+                    : room.maxUsers > 0 ? room.userCount + "/" + room.maxUsers
+                    : String(room.userCount);
+  item.appendChild(count);
+
+  item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (room.hasPassword) {
+      _showPickerPassword(picker, item, address, port, room.name);
+    } else {
+      _hideRoomPicker();
+      _joinRoom(address, port, room.name, "");
+    }
+  });
+
+  return item;
+}
+
+// Swaps a password-protected room's row for a password field + Join button
+function _showPickerPassword(picker, item, address, port, roomName) {
+  const existing = picker.querySelector(".room-picker-password");
+  if (existing) existing.remove();
+
+  const row = document.createElement("form");
+  row.className = "room-picker-password";
+
+  const input = document.createElement("input");
+  input.type = "password";
+  input.placeholder = "Password for " + roomName;
+  input.autocomplete = "off";
+  row.appendChild(input);
+
+  const join = document.createElement("button");
+  join.type = "submit";
+  join.textContent = "Join";
+  join.disabled = true;
+  row.appendChild(join);
+
+  input.addEventListener("input", () => { join.disabled = input.value.length === 0; });
+  row.addEventListener("click", (e) => e.stopPropagation());
+  row.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!input.value) return;
+    _hideRoomPicker();
+    _joinRoom(address, port, roomName, input.value);
+  });
+
+  item.after(row);
+  input.focus();
+}
+
+async function _joinRoom(address, port, roomName, password) {
+  try {
+    await window.saucer.exposed.connect_to_server(address, port, roomName, password);
+    // Result arrives asynchronously via handleRoomEntryResponse() / addKnownRoom() from C++
+  } catch (err) {
+    console.error("Failed to call C++:", err);
+    showConnectionError("Internal error: " + err);
+  }
+}
+
+function _hideRoomPicker() {
+  if (_roomPicker) {
+    _roomPicker.remove();
+    _roomPicker = null;
+  }
+}
