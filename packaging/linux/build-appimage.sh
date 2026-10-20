@@ -29,6 +29,9 @@ OUT_DIR="$(mkdir -p "${3:-$ROOT_DIR/release}" && cd "${3:-$ROOT_DIR/release}" &&
 
 TOOLS_DIR="$BUILD_DIR/appimage-tools"
 APPDIR="$BUILD_DIR/AppDir"
+# Must match the GApplication ID in src/client/GUI/WebUI.cpp: Wayland docks
+# find the .desktop file and icon through it.
+APP_ID="io.github.borisbrock.Einklang"
 
 # Pinned tool versions — bump deliberately.
 LINUXDEPLOY_URL="https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage"
@@ -57,9 +60,16 @@ echo "==> Preparing AppDir"
 rm -rf "$APPDIR"
 install -Dm755 "$BUILD_DIR/EinklangClientApp"           "$APPDIR/usr/bin/EinklangClientApp"
 install -Dm644 "$ROOT_DIR/src/client/client-config.yml"  "$APPDIR/usr/share/einklang/client-config.yml"
-install -Dm644 "$PKG_DIR/einklang.desktop"               "$APPDIR/usr/share/applications/einklang.desktop"
-install -Dm644 "$PKG_DIR/einklang.png"                   "$APPDIR/usr/share/icons/hicolor/64x64/apps/einklang.png"
+install -Dm644 "$PKG_DIR/$APP_ID.desktop"                "$APPDIR/usr/share/applications/$APP_ID.desktop"
 install -Dm644 "$PKG_DIR/apprun-hook.sh"                 "$APPDIR/apprun-hooks/einklang.sh"
+
+# App icon: the standard hicolor sizes iconrender produced (linuxdeploy rejects
+# others, such as 40), plus the SVG as the scalable one.
+for size in 16 20 24 32 48 64 96 128 256; do
+    install -Dm644 "$BUILD_DIR/icons/einklang-$size.png" \
+        "$APPDIR/usr/share/icons/hicolor/${size}x${size}/apps/$APP_ID.png"
+done
+install -Dm644 "$ROOT_DIR/icon.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 
 # Locate the WebKitGTK helper directory of the build host.
 WEBKIT_PROCESS="$(find /usr/lib /usr/libexec -name WebKitWebProcess -path '*webkitgtk-6.0*' -print -quit 2>/dev/null || true)"
@@ -88,8 +98,7 @@ DEPLOY_GTK_VERSION=4 linuxdeploy-x86_64.AppImage \
     --appdir "$APPDIR" \
     --executable "$APPDIR/usr/bin/EinklangClientApp" \
     --deploy-deps-only "$APPDIR/$WEBKIT_DIR" \
-    --desktop-file "$APPDIR/usr/share/applications/einklang.desktop" \
-    --icon-file "$APPDIR/usr/share/icons/hicolor/64x64/apps/einklang.png" \
+    --desktop-file "$APPDIR/usr/share/applications/$APP_ID.desktop" \
     --plugin gtk
 
 # ---------------------------------------------------------------------------

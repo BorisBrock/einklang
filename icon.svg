@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Einklang app icon (detailed). icon-small.svg is the variant for <= 32 px. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="24" x2="216" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="0.5" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="96" cy="64" r="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="120" fill="url(#bg)"/>
+  <circle cx="128" cy="128" r="120" fill="url(#shine)"/>
+
+  <!-- Speech bubble -->
+  <path fill="#ffffff" d="M 90 66 H 166 A 30 30 0 0 1 196 96 V 142 A 30 30 0 0 1 166 172 H 116 L 82 200 L 88 172 A 30 30 0 0 1 60 142 V 96 A 30 30 0 0 1 90 66 Z"/>
+
+  <!-- Voice level bars -->
+  <g fill="url(#bg)">
+    <rect x="77"  y="109" width="14" height="20" rx="7"/>
+    <rect x="99"  y="95"  width="14" height="48" rx="7"/>
+    <rect x="121" y="83"  width="14" height="72" rx="7"/>
+    <rect x="143" y="95"  width="14" height="48" rx="7"/>
+    <rect x="165" y="109" width="14" height="20" rx="7"/>
+  </g>
+</svg>

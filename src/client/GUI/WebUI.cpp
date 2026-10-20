@@ -16,6 +16,12 @@
 namespace saucer { template <> struct stable_natives<window> { HWND hwnd; }; }
 #else
 #  include <unistd.h>
+// Only the stable natives' pointer and one GIO call are needed, so declare
+// them here rather than pulling in the GTK/libadwaita headers.
+using AdwApplication = struct _AdwApplication;
+namespace saucer { template <> struct stable_natives<application> { AdwApplication* application; }; }
+extern "C" void g_application_set_flags(void* application, int flags);
+constexpr int kGApplicationNonUnique = 1 << 5; // G_APPLICATION_NON_UNIQUE
 #endif
 #include "JsUtils.h"
 #include "WebUI.h"
@@ -402,14 +408,15 @@ int WebUI::Run()
   };
 
 #ifdef _WIN32
-  const auto pid = GetCurrentProcessId();
-#else
-  const auto pid = ::getpid();
-#endif
-  // The ID must be a valid GApplication ID (contain at least one dot, each
-  // segment starting with a letter) so that saucer passes it to GApplication
-  // verbatim on Linux.  Appending the PID makes every process instance unique,
-  // preventing GTK's single-instance enforcement from killing the second client.
-  const auto appId = "app.einklang.client" + std::to_string(pid);
+  const auto appId = "app.einklang.client" + std::to_string(GetCurrentProcessId());
   return saucer::application::create({.id = appId})->run(start);
+#else
+  // On Linux the ID becomes the Wayland app ID, which docks match against the
+  // installed .desktop file and icon (packaging/linux), so it has to be fixed.
+  // Marking the GApplication non-unique stops GTK's single-instance
+  // enforcement from handing a second client over to the first.
+  auto app = saucer::application::create({.id = "io.github.borisbrock.Einklang"});
+  g_application_set_flags(app->native<true>().application, kGApplicationNonUnique);
+  return app->run(start);
+#endif
 }

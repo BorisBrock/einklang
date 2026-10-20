@@ -142,6 +142,20 @@ FetchContent_Declare(
     SYSTEM
 )
 
+# nanosvg + stb_image_write — render the app icon SVGs at build time
+FetchContent_Declare(
+    nanosvg
+    URL      https://github.com/memononen/nanosvg/archive/239e102ec2c691f2902e20ace2ed36ee4a35cfe6.tar.gz
+    URL_HASH SHA256=2bc68bdb518d7800252042e5cad50a0ab321596f0cbf49ef2a752926329063d2
+    SOURCE_SUBDIR _no_cmake_ # header-only use; skip nanosvg's own CMake project
+)
+FetchContent_Declare(
+    stb_image_write
+    URL      https://raw.githubusercontent.com/nothings/stb/a7d4c2175630e1ea5b6f8dd00ab96fed0b97b96d/stb_image_write.h
+    URL_HASH SHA256=cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
+    DOWNLOAD_NO_EXTRACT TRUE
+)
+
 FetchContent_MakeAvailable(flatbuffers enet yaml_cpp sqlite3)
 if(EINKLANG_BUILD_CLIENT)
     FetchContent_MakeAvailable(opus miniaudio saucer)
@@ -264,6 +278,50 @@ function(einklang_finalize_target target)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# App icon
+# ---------------------------------------------------------------------------
+# icon.svg and icon-small.svg are the only sources. iconrender turns them into
+# PNGs (sizes up to ICON_SMALL_MAX from icon-small.svg) and an ICO, used for
+# the Windows executables and the Linux AppImage.
+if(EINKLANG_BUILD_CLIENT OR WIN32)
+    FetchContent_MakeAvailable(nanosvg stb_image_write)
+
+    set(ICON_SIZES 16 20 24 32 40 48 64 96 128 256)
+    set(ICON_SMALL_MAX 32)
+    set(ICON_DIR "${PROJECT_BINARY_DIR}/icons")
+
+    add_executable(iconrender packaging/iconrender.cpp)
+    target_include_directories(iconrender SYSTEM PRIVATE
+        "${nanosvg_SOURCE_DIR}/src" "${stb_image_write_SOURCE_DIR}")
+    target_compile_definitions(iconrender PRIVATE _CRT_SECURE_NO_WARNINGS)
+    if(UNIX)
+        target_link_libraries(iconrender PRIVATE m)
+    endif()
+
+    set(ICON_PNGS "")
+    foreach(size ${ICON_SIZES})
+        list(APPEND ICON_PNGS "${ICON_DIR}/einklang-${size}.png")
+    endforeach()
+    add_custom_command(
+        OUTPUT ${ICON_PNGS} "${ICON_DIR}/einklang.ico"
+        COMMAND iconrender
+            "${PROJECT_SOURCE_DIR}/icon.svg" "${PROJECT_SOURCE_DIR}/icon-small.svg"
+            ${ICON_SMALL_MAX} "${ICON_DIR}" ${ICON_SIZES}
+        DEPENDS iconrender icon.svg icon-small.svg
+        COMMENT "Rendering app icon"
+        VERBATIM)
+    add_custom_target(einklang_icons ALL DEPENDS ${ICON_PNGS} "${ICON_DIR}/einklang.ico")
+
+    # Icon for Explorer and the taskbar (resource ID 1, which WebUI also loads
+    # for the window's title bar).
+    if(WIN32)
+        file(WRITE "${ICON_DIR}/einklang.rc" "1 ICON \"einklang.ico\"\n")
+        set_source_files_properties("${ICON_DIR}/einklang.rc" PROPERTIES
+            OBJECT_DEPENDS "${ICON_DIR}/einklang.ico")
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Client executable
 # ---------------------------------------------------------------------------
 if(EINKLANG_BUILD_CLIENT)
@@ -304,22 +362,26 @@ add_executable(EinklangClientApp WIN32
 )
 
 # Bake GUI assets into the binary so no loose files are needed at runtime.
+# They are staged together with the app icon (as logo.svg); configure_file
+# makes CMake re-run, and so re-embed, whenever one of them changes.
+set(GUI_ASSET_DIR "${PROJECT_BINARY_DIR}/gui-assets")
+file(REMOVE_RECURSE "${GUI_ASSET_DIR}")
+file(GLOB GUI_ASSETS RELATIVE "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets"
+    "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets/*")
+foreach(asset ${GUI_ASSETS})
+    configure_file("src/client/GUI/Assets/${asset}" "${GUI_ASSET_DIR}/${asset}" COPYONLY)
+endforeach()
+configure_file(icon.svg "${GUI_ASSET_DIR}/logo.svg" COPYONLY)
+
 # saucer_embed() is provided by saucer-embed, which saucer itself pulls in.
 saucer_embed(
-    "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets"
+    "${GUI_ASSET_DIR}"
     DESTINATION "${PROJECT_BINARY_DIR}/embedded"
     TARGET EinklangClientApp
 )
 
-# Embed the application icon into the Windows executable via a .rc resource file.
 if(WIN32)
-    set(APP_ICON_PATH "${PROJECT_SOURCE_DIR}/src/client/app.ico")
-    configure_file(
-        "${PROJECT_SOURCE_DIR}/src/client/app.rc.in"
-        "${PROJECT_BINARY_DIR}/app.rc"
-        @ONLY
-    )
-    target_sources(EinklangClientApp PRIVATE "${PROJECT_BINARY_DIR}/app.rc")
+    target_sources(EinklangClientApp PRIVATE "${ICON_DIR}/einklang.rc")
     # WIN32 subsystem requires WinMain; redirect to main() via the CRT entry point.
     if(MSVC)
         target_link_options(EinklangClientApp PRIVATE "LINKER:/ENTRY:mainCRTStartup")
@@ -374,6 +436,10 @@ target_link_libraries(EinklangServerApp PRIVATE
     sqlite3_lib
 )
 einklang_finalize_target(EinklangServerApp)
+
+if(WIN32)
+    target_sources(EinklangServerApp PRIVATE "${ICON_DIR}/einklang.rc")
+endif()
 
 add_custom_command(TARGET EinklangServerApp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

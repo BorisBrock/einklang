@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.svg" alt="Einklang logo" width="128">
+</p>
+
 # Einklang
 
 *The next generation voice chat for gamers.*
@@ -124,6 +128,8 @@ that playback stays gap-free.
   It publishes a GitHub release with `Einklang-<version>-x86_64.AppImage` (Linux client), `EinklangClient_Portable_Windows_<version>.zip` and `EinklangServer_Portable_Windows_<version>.zip`, and pushes `borisbrock/einklang:<version>` (plus `<major>.<minor>`, `<major>` and `latest`) to Docker Hub. Tags with a suffix (e.g. `v1.1.0-rc1`) become pre-releases and don't move `latest`. It needs the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 
 The version is set at configure time: `-DEINKLANG_VERSION=1.2.3` (what the release workflow and the `release-*` scripts pass), otherwise `git describe` (e.g. `1.0.0-3-gabc1234`), or `0.0.0-dev` without git metadata. Docker builds take it as `--build-arg EINKLANG_VERSION=1.2.3`. The client shows it in the window title and the Settings dialog; the server prints it on startup and reports it in status queries.
+
+The app icon comes from `icon.svg` (detailed) and `icon-small.svg` (32 px and below); `packaging/iconrender.cpp` renders them into PNGs and an ICO at build time for the Windows executables and the AppImage, and the client shows `icon.svg` in its empty chat view.
 
 The AppImage keeps its configuration in `~/.config/einklang/client-config.yml` (the bundle itself is read-only); `EINKLANG_CLIENT_CONFIG` overrides the config path for any build. Running `packaging/linux/build-appimage.sh <build-dir> <version>` builds the AppImage locally.
 
