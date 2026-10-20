@@ -72,6 +72,10 @@ int main(int argc, char* argv[])
     if (configManager.Get().userName.empty())
         configManager.Get().userName = ConfigManager::GetOsUserName();
 
+    // First start: write the defaults right away so the config file exists
+    if (configManager.IsFirstStart())
+        configManager.Save();
+
     // Seed room list and user name from config before starting the GUI
     viewModel.SetKnownRooms(configManager.Get().knownRooms);
     viewModel.SetUserName(configManager.Get().userName);

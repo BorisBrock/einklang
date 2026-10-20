@@ -59,7 +59,6 @@ echo ""
 echo "==> Preparing AppDir"
 rm -rf "$APPDIR"
 install -Dm755 "$BUILD_DIR/EinklangClientApp"           "$APPDIR/usr/bin/EinklangClientApp"
-install -Dm644 "$ROOT_DIR/src/client/client-config.yml"  "$APPDIR/usr/share/einklang/client-config.yml"
 install -Dm644 "$PKG_DIR/$APP_ID.desktop"                "$APPDIR/usr/share/applications/$APP_ID.desktop"
 install -Dm644 "$PKG_DIR/apprun-hook.sh"                 "$APPDIR/apprun-hooks/einklang.sh"
 

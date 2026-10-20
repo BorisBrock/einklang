@@ -2,7 +2,7 @@
 
 [← Back to the README](../README.md)
 
-The client stores its settings in `client-config.yml` next to the executable (the AppImage uses `~/.config/einklang/client-config.yml`; `EINKLANG_CLIENT_CONFIG` overrides the path). Most of these settings can be changed in the client's Settings dialog.
+The client stores its settings in `client-config.yml` next to the executable (the AppImage uses `~/.config/einklang/client-config.yml`; `EINKLANG_CLIENT_CONFIG` overrides the path). The client creates the file on first start and shows a welcome screen to pick your name and microphone. Most of these settings can be changed in the client's Settings dialog.
 
 ## Keys
 

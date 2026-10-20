@@ -88,11 +88,10 @@ echo ""
 echo "==> Packaging client → $CLIENT_ZIP"
 
 cp "$BUILD_DIR/EinklangClientApp"  "$RELEASE_DIR/EinklangClientApp"
-cp "$BUILD_DIR/client-config.yml" "$RELEASE_DIR/client-config.yml"
 
-(cd "$RELEASE_DIR" && zip "$CLIENT_ZIP" EinklangClientApp client-config.yml)
+(cd "$RELEASE_DIR" && zip "$CLIENT_ZIP" EinklangClientApp)
 
-rm "$RELEASE_DIR/EinklangClientApp" "$RELEASE_DIR/client-config.yml"
+rm "$RELEASE_DIR/EinklangClientApp"
 
 echo "    Created: $RELEASE_DIR/$CLIENT_ZIP"
 

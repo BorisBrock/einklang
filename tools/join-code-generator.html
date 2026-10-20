@@ -405,7 +405,13 @@ const JoinCode = (() => {
     }
   }
 
-  return { encode, decode, DEFAULT_PORT };
+  // The form a server address takes in a join code (lowercase DNS name,
+  // compressed IPv6), so differently written addresses of one server compare equal
+  function canonicalHost(address) {
+    return parseHost(String(address).trim()).text;
+  }
+
+  return { encode, decode, canonicalHost, DEFAULT_PORT };
 })();
 
 if (typeof module !== "undefined") module.exports = JoinCode;

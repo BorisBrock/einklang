@@ -118,8 +118,7 @@ Write-Host ""
 Write-Host "==> Packaging client → $ClientZip"
 
 New-FlatZip -ZipPath $ClientZip -Files @(
-    (Join-Path $BinDir 'EinklangClientApp.exe'),
-    (Join-Path $BuildDir 'client-config.yml')
+    (Join-Path $BinDir 'EinklangClientApp.exe')
 )
 
 Write-Host "    Created: $ClientZip"

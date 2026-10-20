@@ -292,6 +292,11 @@ int WebUI::Run()
       return EINKLANG_VERSION_STRING;
     });
 
+    // The GUI shows its welcome screen when there was no config file yet
+    webview->expose("is_first_start", [this]() -> bool {
+      return mConfigManager.IsFirstStart();
+    });
+
     webview->expose("get_user_name", [this]() -> std::string {
       return mConfigManager.Get().userName;
     });

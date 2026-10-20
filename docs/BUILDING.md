@@ -25,9 +25,7 @@ All dependencies are fetched automatically via CMake's `FetchContent` and pinned
 
 ## Building
 
-The build system copies the relevant config files next to each binary automatically after every build:
-- `build/<variant>/client-config.yml`
-- `build/<variant>/server-config.yml`
+The build system copies the server config file next to the binary automatically after every build (`build/<variant>/server-config.yml`). The client writes its own `client-config.yml` on first start.
 
 ### Step 1 — Select a build variant
 

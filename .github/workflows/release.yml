@@ -116,7 +116,7 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Compress-Archive -DestinationPath "release/EinklangClient_Portable_Windows_$version.zip" -Path (
-            @('build/Release/EinklangClientApp.exe', 'src/client/client-config.yml', 'LICENSE') + $crt)
+            @('build/Release/EinklangClientApp.exe', 'LICENSE') + $crt)
           Compress-Archive -DestinationPath "release/EinklangServer_Portable_Windows_$version.zip" -Path (
             @('build/Release/EinklangServerApp.exe', 'src/server/server-config.yml', 'LICENSE') + $crt)
 

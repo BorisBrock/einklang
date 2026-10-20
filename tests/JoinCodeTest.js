@@ -57,6 +57,12 @@ for (const [input, expected] of cases) {
 // The common case should stay short
 assert(JoinCode.encode({ address: "192.168.1.20", room: "lobby" }).length <= 14);
 
+// --- Canonical host (used to match rooms to an already known server) ---
+
+assert.strictEqual(JoinCode.canonicalHost(" MyServer.DE "), "myserver.de");
+assert.strictEqual(JoinCode.canonicalHost("[0:0:0:0:0:0:0:1]"), "::1");
+assert.strictEqual(JoinCode.canonicalHost("192.168.1.20"), "192.168.1.20");
+
 // --- Invalid input ---
 
 assert.throws(() => JoinCode.encode({ address: "", room: "a" }));

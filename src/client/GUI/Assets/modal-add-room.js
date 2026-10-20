@@ -126,8 +126,8 @@ document.addEventListener("DOMContentLoaded", () => {
   connectBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    const server   = serverEl.value.trim();
     const port     = parseInt(portEl.value, 10);
+    const server   = knownServerAddress(serverEl.value.trim(), port);
     const room     = roomEl.value.trim();
     const password = passwordEl.value; // password may be empty
 

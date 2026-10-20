@@ -400,13 +400,6 @@ target_link_libraries(EinklangClientApp PRIVATE
     opus
 )
 einklang_finalize_target(EinklangClientApp)
-
-# Copy the client configuration file next to the binary after each build.
-add_custom_command(TARGET EinklangClientApp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${PROJECT_SOURCE_DIR}/src/client/client-config.yml
-        $<TARGET_FILE_DIR:EinklangClientApp>/client-config.yml
-)
 endif() # EINKLANG_BUILD_CLIENT
 
 # ---------------------------------------------------------------------------

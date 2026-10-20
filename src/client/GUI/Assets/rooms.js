@@ -93,8 +93,7 @@ function addKnownRoom(address, port, roomName) {
   if (!container) return;
 
   const key = address + ":" + port;
-  const escapedKey = key.replace(/'/g, "\\'");
-  const existingCard = container.querySelector("[data-server-key='" + escapedKey + "']");
+  const existingCard = container.querySelector("[data-server-key='" + CSS.escape(key) + "']");
 
   if (existingCard) {
     const list = existingCard.querySelector(".room-list");
@@ -109,6 +108,22 @@ function addKnownRoom(address, port, roomName) {
   } else {
     container.appendChild(_buildServerCard(address, port, [roomName]));
   }
+}
+
+// Returns the address under which a server is already in the room list, or
+// the given address if it is a new server. Matches ignore how the address is
+// written ("MyServer.de" / "myserver.de", "[::1]" / "::1"), so a room added by
+// hand or via join code joins the existing server instead of duplicating it.
+function knownServerAddress(address, port) {
+  const canonical = JoinCode.canonicalHost(address);
+  for (const card of document.querySelectorAll(".server-card")) {
+    const key      = card.dataset.serverKey;
+    const colonIdx = key.lastIndexOf(":");
+    const known    = key.slice(0, colonIdx);
+    if (parseInt(key.slice(colonIdx + 1), 10) === port && JoinCode.canonicalHost(known) === canonical)
+      return known;
+  }
+  return address;
 }
 
 // ---------------------------------------------------------------------------

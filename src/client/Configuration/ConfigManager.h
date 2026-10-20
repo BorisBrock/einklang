@@ -12,6 +12,9 @@ public:
   bool Load();
   bool Save() const;
 
+  // True if Load() found no config file, i.e. the client runs for the first time
+  bool IsFirstStart() const;
+
   ClientConfig& Get();
   const ClientConfig& Get() const;
 
@@ -22,4 +25,5 @@ public:
 private:
   std::string mFilename;
   ClientConfig mConfig{};
+  bool mFirstStart{false};
 };

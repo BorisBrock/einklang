@@ -1,6 +1,7 @@
 #include "ConfigManager.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <print>
@@ -23,6 +24,15 @@ ConfigManager::ConfigManager(std::string filename)
 
 bool ConfigManager::Load()
 {
+  // No config yet: start from the defaults; the GUI shows its welcome screen
+  // and the file is written on the first Save().
+  std::error_code ec;
+  if (!std::filesystem::exists(mFilename, ec))
+  {
+    mFirstStart = true;
+    return true;
+  }
+
   try
   {
     YAML::Node node = YAML::LoadFile(mFilename);
@@ -76,7 +86,8 @@ bool ConfigManager::Load()
     if (node["noise-filter"])
       mConfig.noiseFilter = node["noise-filter"].as<bool>();
 
-    if (node["known-rooms"])
+    // Written as "known-rooms: ~" while the list is empty
+    if (node["known-rooms"] && node["known-rooms"].IsSequence())
     {
       for (const auto& roomNode : node["known-rooms"])
       {
@@ -136,6 +147,11 @@ bool ConfigManager::Save() const
     }
     root["known-rooms"] = rooms;
 
+    // The config directory may not exist yet on first start
+    const std::filesystem::path parent = std::filesystem::path(mFilename).parent_path();
+    if (!parent.empty())
+      std::filesystem::create_directories(parent);
+
     std::ofstream fout(mFilename);
     if (!fout.is_open())
     {
@@ -151,6 +167,11 @@ bool ConfigManager::Save() const
   }
 
   return true;
+}
+
+bool ConfigManager::IsFirstStart() const
+{
+  return mFirstStart;
 }
 
 ClientConfig& ConfigManager::Get()

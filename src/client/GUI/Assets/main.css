@@ -1394,6 +1394,61 @@ dialog input[readonly] {
   width: 100%;
 }
 
+/* ----- Welcome dialog (first start) ----- */
+
+.welcome-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.1rem;
+}
+
+.welcome-logo {
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 0.75rem;
+}
+
+#welcome-dialog .welcome-intro h3 {
+  margin-bottom: 0.35rem;
+}
+
+#welcome-dialog .welcome-intro p {
+  margin: 0;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+}
+
+#welcome-dialog .welcome-field-desc {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+#welcome-dialog select {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+#welcome-join-code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+#welcome-dialog .dialog-error {
+  margin: 0 0 0.4rem;
+}
+
+#welcome-dialog .welcome-hint {
+  margin: 0.25rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  background: var(--accent-soft);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Settings dialog
    ══════════════════════════════════════════════════════════════════════════ */

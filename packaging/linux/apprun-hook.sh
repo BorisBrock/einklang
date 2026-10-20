@@ -1,14 +1,8 @@
 # AppRun hook for the Einklang AppImage (sourced by linuxdeploy's AppRun).
 
 # The AppImage is read-only, so keep the client configuration in the user's
-# config directory and seed it with the defaults on first start.
-einklang_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/einklang"
-if [ ! -f "$einklang_config_dir/client-config.yml" ]; then
-    mkdir -p "$einklang_config_dir"
-    cp "$APPDIR/usr/share/einklang/client-config.yml" "$einklang_config_dir/client-config.yml"
-    chmod u+w "$einklang_config_dir/client-config.yml"
-fi
-export EINKLANG_CLIENT_CONFIG="$einklang_config_dir/client-config.yml"
+# config directory. The client creates it on first start.
+export EINKLANG_CLIENT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/einklang/client-config.yml"
 
 # libwebkitgtk was patched to look for its helper processes relative to
 # "$APPDIR/usr" (see build-appimage.sh).

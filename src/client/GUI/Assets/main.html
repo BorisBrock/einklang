@@ -19,6 +19,7 @@
     <script type="text/javascript" src="modal-edit-server.js"></script>
     <script type="text/javascript" src="modal-connection-error.js"></script>
     <script type="text/javascript" src="modal-settings.js"></script>
+    <script type="text/javascript" src="modal-welcome.js"></script>
 
     <div class="layout">
       <!-- Left fixed column -->
@@ -265,6 +266,38 @@
           <span id="settings-app-version" class="app-version"></span>
           <button class="secondary" id="settings-cancel-btn">Cancel</button>
           <button id="settings-ok-btn">Save</button>
+        </footer>
+      </article>
+    </dialog>
+
+    <!-- Welcome Dialog (first start only) -->
+    <dialog id="welcome-dialog">
+      <article>
+        <div class="welcome-intro">
+          <img class="welcome-logo" src="logo.svg" alt="" aria-hidden="true">
+          <h3>Welcome to Einklang!</h3>
+          <p>Great to have you here. Let's get you set up — this only takes a moment.</p>
+        </div>
+
+        <label for="welcome-username">Your name</label>
+        <p class="welcome-field-desc">Shown to others in every chat room.</p>
+        <input type="text" id="welcome-username" placeholder="Your name" autocomplete="off" maxlength="64" />
+
+        <label for="welcome-input-select">Microphone</label>
+        <select id="welcome-input-select"></select>
+
+        <label for="welcome-join-code">Join code <small>(optional)</small></label>
+        <p class="welcome-field-desc">Got one from a friend? Paste it here to join their room right away.</p>
+        <p id="welcome-join-code-error" class="dialog-error" style="display: none;"></p>
+        <input type="text" id="welcome-join-code" placeholder="Join code" autocomplete="off" spellcheck="false" />
+
+        <p class="welcome-hint">
+          Add servers and rooms with the <strong>+</strong> button on the left.
+          Everything else — themes, speakers, voice activation — is in <strong>Settings</strong>.
+        </p>
+
+        <footer>
+          <button id="welcome-ok-btn">Get started</button>
         </footer>
       </article>
     </dialog>
