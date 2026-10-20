@@ -17,6 +17,19 @@ To make a home-hosted server reachable from the internet:
 2. Use a DynDNS hostname if your public IP changes; clients resolve the address on every connect.
 3. On DS-Lite connections (no public IPv4), clients must connect via IPv6 — open the port for the server host in the router's IPv6 firewall instead. The server listens on IPv4 and IPv6.
 
+## Inviting friends with a join code
+
+Instead of telling everyone the address, port, room and password, hand out a **join code**. Open [`tools/join-code-generator.html`](../tools/join-code-generator.html) in any browser (it is a single self-contained file that works offline), fill in the four fields and copy the code. Your friends click **+** → **Use join code…** in the client, paste it and press **Connect**.
+
+A code for an IPv4 address with the default port and no password is only 13 characters long, e.g. `vkua27kaRHNgo`. The code contains the password in a recoverable form, so share it as carefully as the password itself.
+
+<details>
+<summary>How the code is built</summary>
+
+Each field becomes a series of digits in its own base: an IPv4 octet is one base-256 digit, a hostname character one base-40 digit (lowercase, digits, `-._` and space), other text uses printable ASCII (base 95) or falls back to UTF-8 bytes. All digits are combined into a single big integer in mixed radix and written in Base58 (no `0`, `O`, `I` or `l`, so the code double-click-selects as one word). The default port and an empty password are stored as zero digits at the most significant end, where they cost nothing. A version number and an 8-bit checksum catch typos and codes from newer versions.
+
+</details>
+
 ## Docker
 
 Run the prebuilt image:

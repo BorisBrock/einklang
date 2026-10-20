@@ -91,6 +91,11 @@ ctest --test-dir build/Debug --output-on-failure
 (jitter, loss, delay spikes, stalls) into the voice jitter buffer and checks
 that playback stays gap-free.
 
+`JoinCodeTest` (run with Node.js, skipped if `node` isn't found) round-trips
+join codes through `src/client/GUI/Assets/joincode.js` and checks that
+`tools/join-code-generator.html` carries an identical copy of the codec. After
+changing `joincode.js`, update the copy with `node tests/JoinCodeTest.js --sync`.
+
 ## Running
 
 Always run the binaries from their build directory so they can find their config files. Start the server before the client.

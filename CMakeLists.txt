@@ -461,4 +461,13 @@ if(EINKLANG_BUILD_TESTS AND EINKLANG_BUILD_CLIENT)
     )
     target_link_libraries(JitterBufferTest PRIVATE einklang_warnings opus)
     add_test(NAME JitterBufferTest COMMAND JitterBufferTest)
+
+    # The join code codec is JavaScript; test it when Node.js is available
+    find_program(NODE_EXECUTABLE node)
+    if(NODE_EXECUTABLE)
+        add_test(NAME JoinCodeTest
+            COMMAND "${NODE_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/JoinCodeTest.js")
+    else()
+        message(STATUS "Node.js not found, skipping JoinCodeTest")
+    endif()
 endif()
