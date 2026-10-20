@@ -99,6 +99,7 @@ function addKnownRoom(address, port, roomName, userName) {
 
     if (!existingItem) {
       list.appendChild(_makeRoomItem(address, port, roomName, userName || ""));
+      _applyServerStatus(existingCard);
     } else {
       // Update the stored userName if we now have one
       if (userName) existingItem.dataset.userName = userName;
@@ -127,8 +128,14 @@ function _makeRoomItem(address, port, roomName, userName) {
   item.appendChild(roomIcon);
 
   const roomLabel = document.createElement("span");
+  roomLabel.className = "room-name";
   roomLabel.textContent = roomName;
   item.appendChild(roomLabel);
+
+  // User-count badge (filled in by _applyServerStatus)
+  const usersBadge = document.createElement("span");
+  usersBadge.className = "room-users";
+  item.appendChild(usersBadge);
 
   item.addEventListener("click", async () => {
     // Ignore if already in this room
@@ -180,6 +187,11 @@ function _buildServerCard(address, port, rooms) {
   serverLabel.textContent = address;
   title.appendChild(serverLabel);
 
+  // Online/offline indicator (filled in by _applyServerStatus)
+  const statusDot = document.createElement("span");
+  statusDot.className = "server-status";
+  title.appendChild(statusDot);
+
   card.appendChild(title);
 
   const list = document.createElement("div");
@@ -188,6 +200,7 @@ function _buildServerCard(address, port, rooms) {
     list.appendChild(_makeRoomItem(address, port, r.roomName, r.userName));
   }
   card.appendChild(list);
+  _applyServerStatus(card);
   return card;
 }
 
@@ -219,8 +232,90 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Failed to load known rooms:", err);
     }
+
+    // Statuses polled before the page finished loading
+    try {
+      const json = await window.saucer.exposed.get_server_statuses();
+      for (const status of JSON.parse(json)) setServerStatus(status);
+    } catch (err) {
+      console.error("Failed to load server statuses:", err);
+    }
   })();
 });
+
+// ---------------------------------------------------------------------------
+// Server status (online state and room occupancy)
+// ---------------------------------------------------------------------------
+
+// "address:port" → latest status object from C++:
+// { address, port, online, serverVersion, rooms: [{ name, userCount, maxUsers }] }
+const _serverStatus = new Map();
+
+// Called by C++ via webview->execute() whenever a server's status changes
+function setServerStatus(status) {
+  const key = status.address + ":" + status.port;
+  _serverStatus.set(key, status);
+
+  const card = document.querySelector(".server-card[data-server-key='" + CSS.escape(key) + "']");
+  if (card) _applyServerStatus(card);
+}
+
+// Updates a server card's status dot and room user counts from the cache
+function _applyServerStatus(card) {
+  const status = _serverStatus.get(card.dataset.serverKey);
+  const known  = status !== undefined;
+  const online = known && status.online;
+
+  card.classList.toggle("offline", known && !online);
+
+  const dot = card.querySelector(".server-status");
+  if (dot) {
+    dot.classList.toggle("online",  online);
+    dot.classList.toggle("offline", known && !online);
+    dot.title = !known ? "Checking server status…"
+              : online ? "Online" + (status.serverVersion ? " (v" + status.serverVersion + ")" : "")
+              : "Offline";
+  }
+
+  card.querySelectorAll(".room-item").forEach((item) => {
+    const room = online ? status.rooms.find((r) => r.name === item.dataset.room) : undefined;
+    _setRoomUserCount(item, room ? room.userCount : null, room ? room.maxUsers : 0);
+  });
+}
+
+// Shows "Empty" or the user count on a room item; null hides the badge
+function _setRoomUserCount(item, count, maxUsers) {
+  const badge = item.querySelector(".room-users");
+  if (!badge) return;
+
+  if (count === null) {
+    badge.textContent = "";
+    badge.title = "";
+    badge.style.display = "none";
+    return;
+  }
+
+  badge.style.display = "";
+  badge.classList.toggle("empty", count === 0);
+  badge.textContent = count === 0 ? "Empty" : String(count);
+  badge.title = maxUsers > 0
+    ? count + " of " + maxUsers + " users"
+    : count + (count === 1 ? " user" : " users");
+}
+
+// Keeps the active room's count current between polls (called from setRoomUsers)
+function _updateActiveRoomUserCount(count) {
+  const item = document.querySelector(".room-item.active");
+  if (!item) return;
+
+  const status = _serverStatus.get(item.dataset.address + ":" + item.dataset.port);
+  const room   = status && status.online
+    ? status.rooms.find((r) => r.name === item.dataset.room)
+    : undefined;
+  if (room) room.userCount = count;
+
+  _setRoomUserCount(item, count, room ? room.maxUsers : 0);
+}
 
 // ---------------------------------------------------------------------------
 // User list
@@ -254,6 +349,8 @@ function setRoomUsers(users) {
 
     list.appendChild(item);
   });
+
+  _updateActiveRoomUserCount(users.length);
 }
 
 // ---------------------------------------------------------------------------

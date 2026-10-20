@@ -167,6 +167,13 @@ int WebUI::Run()
                              isSpeaking ? "true" : "false"));
     });
 
+    mViewModel.onServerStatusChanged.subscribe([this](const std::string& address, uint16_t port,
+                                                      const ServerStatus& status)
+    {
+      if (!mExecuteJs) return;
+      mExecuteJs("setServerStatus(" + WebViewModel::BuildServerStatusJson(address, port, status) + ")");
+    });
+
     // When the active room is removed, tell the GUI to reset to the idle state.
     mViewModel.onActiveRoomLeft.subscribe([this]()
     {
@@ -200,6 +207,10 @@ int WebUI::Run()
 
     webview->expose("get_known_rooms", [this]() -> std::string {
       return mViewModel.GetKnownRoomsJson();
+    });
+
+    webview->expose("get_server_statuses", [this]() -> std::string {
+      return mViewModel.GetServerStatusesJson();
     });
 
     webview->expose("toggle_voice_mute", [this](bool muted) {

@@ -2,11 +2,15 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../../common/Event.h"
 #include "../../common/ChatMessage.h"
+#include "../../common/ServerStatus.h"
 #include "../Configuration/ClientConfig.h"
 
 // Holds all GUI-relevant state and acts as the hub between the JavaScript
@@ -54,6 +58,22 @@ public:
 
   // Returns the known rooms serialised as a JSON array (used by WebUI for get_known_rooms)
   std::string GetKnownRoomsJson() const;
+
+  // Returns the distinct (address, port) pairs of all known rooms
+  std::vector<std::pair<std::string, uint16_t>> GetKnownServers() const;
+
+  // Store the latest status of a server; fires onServerStatusChanged.
+  // Safe to call from any thread.
+  void NotifyServerStatus(const std::string& address, uint16_t port, const ServerStatus& status);
+
+  // Returns the latest status of every known server as a JSON array of the
+  // objects produced by BuildServerStatusJson (used by WebUI for get_server_statuses)
+  std::string GetServerStatusesJson() const;
+
+  // Serialises one server's status as a JSON object:
+  // {"address","port","online","serverVersion","rooms":[{"name","userCount","maxUsers"}]}
+  static std::string BuildServerStatusJson(const std::string& address, uint16_t port,
+                                           const ServerStatus& status);
 
   // Returns the username the local user connected with (empty before first login)
   const std::string& GetLocalUserName() const { return mLocalUserName; }
@@ -124,6 +144,9 @@ public:
   // Args: vadThreshold, inputGain
   Event<float, float>                                      onVoiceSettingsChanged;
 
+  // Fired whenever the set of known rooms changes (added, removed or edited).
+  Event<>                                                  onKnownRoomsChanged;
+
   // --- Events: VM → GUI  (WebUI subscribes to these) ---
 
   Event<ClientConfig::KnownRoom> onRoomAdded;
@@ -140,6 +163,9 @@ public:
 
   // Fired when the room user list is updated. Args: list of user names
   Event<std::vector<std::string>>     onRoomUsersUpdate;
+
+  // Fired when a server's status changes. Args: address, port, status
+  Event<std::string, uint16_t, ServerStatus> onServerStatusChanged;
 
   // Fired when voice activity is detected for a user. Args: userName, isSpeaking
   Event<std::string, bool>            onUserSpeaking;
@@ -165,6 +191,10 @@ private:
   std::string mActiveAddress;
   uint16_t    mActivePort{0};
   std::string mActiveRoom;
+
+  // Latest status per server; written from the status polling thread.
+  mutable std::mutex mServerStatusMutex;
+  std::map<std::pair<std::string, uint16_t>, ServerStatus> mServerStatuses;
 
   // Optional getter for the microphone input RMS level.
   std::function<float()> mInputRmsGetter;

@@ -22,6 +22,7 @@ void WebViewModel::AddKnownRoom(const ClientConfig::KnownRoom& room)
 
   mKnownRooms.push_back(room);
   onRoomAdded.emit(room);
+  onKnownRoomsChanged.emit();
 }
 
 void WebViewModel::NotifyRoomEntryResponse(bool success, const std::string& errorMessage)
@@ -89,6 +90,7 @@ void WebViewModel::HandleRemoveRoom(std::string address, uint16_t port, std::str
   {
     return r.address == address && r.port == port && r.roomName == roomName;
   });
+  onKnownRoomsChanged.emit();
 
   if (wasActive)
   {
@@ -107,6 +109,7 @@ void WebViewModel::HandleRemoveServer(std::string address, uint16_t port)
   {
     return r.address == address && r.port == port;
   });
+  onKnownRoomsChanged.emit();
 
   if (activeWasHere)
   {
@@ -125,6 +128,8 @@ std::string WebViewModel::HandleEditServer(const std::string& oldAddress, uint16
 
   const bool changed = EditServerRooms(mKnownRooms, oldAddress, oldPort,
                                        newAddress, newPort, userName);
+  if (changed)
+    onKnownRoomsChanged.emit();
 
   // The current connection uses the old settings — drop it so the next
   // join uses the edited ones.
@@ -218,6 +223,67 @@ void WebViewModel::NotifyUserSpeaking(const std::string& userName, bool isSpeaki
 void WebViewModel::NotifyRoomChatHistory(std::vector<ChatMessage> entries)
 {
   onRoomChatHistory.emit(std::move(entries));
+}
+
+std::vector<std::pair<std::string, uint16_t>> WebViewModel::GetKnownServers() const
+{
+  std::vector<std::pair<std::string, uint16_t>> servers;
+  for (const auto& r : mKnownRooms)
+  {
+    std::pair<std::string, uint16_t> key{r.address, r.port};
+    if (std::ranges::find(servers, key) == servers.end())
+      servers.push_back(std::move(key));
+  }
+  return servers;
+}
+
+void WebViewModel::NotifyServerStatus(const std::string& address, uint16_t port,
+                                      const ServerStatus& status)
+{
+  {
+    std::lock_guard lock(mServerStatusMutex);
+    mServerStatuses[{address, port}] = status;
+  }
+  onServerStatusChanged.emit(address, port, status);
+}
+
+std::string WebViewModel::GetServerStatusesJson() const
+{
+  std::lock_guard lock(mServerStatusMutex);
+  std::string json = "[";
+  for (const auto& [key, status] : mServerStatuses)
+  {
+    if (json.size() > 1)
+      json += ",";
+    json += BuildServerStatusJson(key.first, key.second, status);
+  }
+  json += "]";
+  return json;
+}
+
+// static
+std::string WebViewModel::BuildServerStatusJson(const std::string& address, uint16_t port,
+                                                const ServerStatus& status)
+{
+  std::string rooms = "[";
+  for (std::size_t i = 0; i < status.rooms.size(); ++i)
+  {
+    if (i > 0)
+      rooms += ",";
+    rooms += std::format(R"({{"name":"{}","userCount":{},"maxUsers":{}}})",
+                         JsUtils::EscapeString(status.rooms[i].name),
+                         status.rooms[i].userCount,
+                         status.rooms[i].maxUsers);
+  }
+  rooms += "]";
+
+  return std::format(
+    R"({{"address":"{}","port":{},"online":{},"serverVersion":"{}","rooms":{}}})",
+    JsUtils::EscapeString(address),
+    port,
+    status.online ? "true" : "false",
+    JsUtils::EscapeString(status.serverVersion),
+    rooms);
 }
 
 // static

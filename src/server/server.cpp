@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "../common/Version.h"
 #include "Networking/EnetServer.h"
+#include "Networking/ServerPacketFactory.h"
 #include "Configuration/ConfigManager.h"
 #include "Rooms/ChatRoomManager.h"
 #include "Connectors/LoginConnector.h"
@@ -92,6 +93,10 @@ int main()
   LoginConnector::Connect(server.PacketHandler(), chatRoomManager);
   ChatConnector::Connect(server.PacketHandler(), chatRoomManager);
   VoiceConnector::Connect(server.PacketHandler(), chatRoomManager);
+  server.SetStatusProvider([&chatRoomManager]()
+  {
+    return ServerPacketFactory::BuildServerStatus(chatRoomManager.Rooms());
+  });
   if (!server.Start(config.port))
   {
     std::println("Failed to start server.");

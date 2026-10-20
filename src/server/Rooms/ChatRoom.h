@@ -31,6 +31,9 @@ public:
 	void AddImageMessage(std::string userName, std::vector<std::uint8_t> imageData,
 	                     std::int64_t timestampMs);
 
+	// Returns the number of users currently in the room
+	std::size_t UserCount() const;
+
 	// Returns the name of every user currently in the room
 	std::vector<std::string> GetUserNames() const;
 

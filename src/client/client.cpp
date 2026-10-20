@@ -3,12 +3,14 @@
 #include <enet.h>
 #include "../common/Version.h"
 #include "Networking/EnetClient.h"
+#include "Networking/ServerStatusPoller.h"
 #include "GUI/WebUI.h"
 #include "GUI/WebViewModel.h"
 #include "Configuration/ConfigManager.h"
 #include "Connectors/ChatConnector.h"
 #include "Connectors/ConnectionConnector.h"
 #include "Connectors/RoomEntryConnector.h"
+#include "Connectors/ServerStatusConnector.h"
 #include "Connectors/VoiceConnector.h"
 #include "Voice/VoicePipeline.h"
 
@@ -48,6 +50,7 @@ int main(int argc, char* argv[])
 
     // Instantiate components
     EnetClient enetClient{};
+    ServerStatusPoller statusPoller{};
     WebViewModel viewModel{};
     WebUI webUI(viewModel, configManager);
     VoicePipeline voicePipeline(enetClient, std::move(voiceOpts));
@@ -70,11 +73,16 @@ int main(int argc, char* argv[])
     ConnectionConnector::Connect(viewModel, enetClient, configManager);
     RoomEntryConnector::Connect(enetClient, viewModel, configManager);
     VoiceConnector::Connect(viewModel, enetClient, voicePipeline, voiceEnabled);
+    ServerStatusConnector::Connect(viewModel, statusPoller);
+
+    // Poll online state and room occupancy of all known servers
+    statusPoller.Start();
 
     // Enter GUI main loop
     int result = webUI.Run();
 
     // Cleanup
+    statusPoller.Stop();
     voicePipeline.Stop();
     enetClient.Disconnect();
 

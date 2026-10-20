@@ -8,6 +8,8 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include "../../common/ServerQuery.h"
+#include "../../common/Version.h"
 #include "../../common/VoicePacket.h"
 #include "protocol_generated.h"
 #include "PeerSessionData.h"
@@ -344,4 +346,32 @@ void ServerPacketFactory::RelayVoiceFrame(ENetHost* server,
   }
 
   enet_host_flush(server);
+}
+
+std::vector<std::uint8_t> ServerPacketFactory::BuildServerStatus(const std::vector<ChatRoom>& rooms)
+{
+  constexpr std::size_t kMaxPayloadSize = ServerQuery::kMaxReplySize - ServerQuery::kReplyHeaderSize;
+
+  for (std::size_t roomCount = rooms.size();; --roomCount)
+  {
+    flatbuffers::FlatBufferBuilder builder;
+
+    std::vector<flatbuffers::Offset<Einklang::RoomStatus>> entries;
+    entries.reserve(roomCount);
+    for (std::size_t i = 0; i < roomCount; ++i)
+    {
+      const auto& room = rooms[i];
+      entries.push_back(Einklang::CreateRoomStatusDirect(
+        builder,
+        room.Name().c_str(),
+        static_cast<std::uint16_t>(std::min<std::size_t>(room.UserCount(), UINT16_MAX)),
+        room.MaxUsers()));
+    }
+
+    const auto payload = Einklang::CreateServerStatusDirect(builder, EINKLANG_VERSION_STRING, &entries);
+    builder.Finish(payload);
+
+    if (builder.GetSize() <= kMaxPayloadSize || roomCount == 0)
+      return {builder.GetBufferPointer(), builder.GetBufferPointer() + builder.GetSize()};
+  }
 }

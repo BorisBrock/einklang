@@ -244,9 +244,11 @@ add_executable(EinklangClientApp WIN32
     src/client/Networking/EnetClient.cpp
     src/client/Networking/ClientPacketFactory.cpp
     src/client/Networking/ServerPacketHandler.cpp
+    src/client/Networking/ServerStatusPoller.cpp
     src/client/Connectors/ChatConnector.cpp
     src/client/Connectors/ConnectionConnector.cpp
     src/client/Connectors/RoomEntryConnector.cpp
+    src/client/Connectors/ServerStatusConnector.cpp
     src/client/Connectors/VoiceConnector.cpp
     src/client/GUI/WebUI.cpp
     src/client/GUI/WebViewModel.cpp

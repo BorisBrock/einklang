@@ -1,9 +1,23 @@
+#include <cstring>
 #include <print>
 #include <vector>
 #include <stdint.h>
 #include <enet.h>
 #include "EnetServer.h"
+#include "../../common/ServerQuery.h"
 #include "../../common/VoicePacket.h"
+
+namespace
+{
+// ENet's intercept callback carries no user pointer; there is one server per process.
+EnetServer* gInterceptTarget = nullptr;
+
+// Minimum time between two status replies to the same source address.
+constexpr enet_uint32 kStatusReplyIntervalMs = 100;
+
+// Prune the rate-limit table once it grows beyond this many entries.
+constexpr std::size_t kMaxRateLimitEntries = 4096;
+}
 
 bool EnetServer::Start(uint16_t port)
 {
@@ -24,6 +38,9 @@ bool EnetServer::Start(uint16_t port)
     return false;
   }
 
+  gInterceptTarget = this;
+  enet_host_set_intercept(mServer, &EnetServer::InterceptRawPacket);
+
   return true;
 }
 
@@ -34,6 +51,7 @@ bool EnetServer::Stop()
     enet_host_destroy(mServer);
     mServer = nullptr;
   }
+  gInterceptTarget = nullptr;
   enet_deinitialize();
   return true;
 }
@@ -41,6 +59,65 @@ bool EnetServer::Stop()
 ClientPacketHandler& EnetServer::PacketHandler()
 {
   return mPacketHandler;
+}
+
+void EnetServer::SetStatusProvider(std::function<std::vector<std::uint8_t>()> provider)
+{
+  mStatusProvider = std::move(provider);
+}
+
+int ENET_CALLBACK EnetServer::InterceptRawPacket(ENetHost* host, void* /*event*/)
+{
+  if (gInterceptTarget == nullptr || gInterceptTarget->mServer != host)
+    return 0;
+  return gInterceptTarget->HandleStatusQuery();
+}
+
+int EnetServer::HandleStatusQuery()
+{
+  std::uint32_t token = 0;
+  if (!ServerQuery::ParseRequest({mServer->receivedData, mServer->receivedDataLength}, token))
+    return 0; // not a status query — let ENet process it
+
+  if (!mStatusProvider || !AllowStatusReply(mServer->receivedAddress))
+    return 1;
+
+  const auto payload = mStatusProvider();
+
+  std::vector<std::uint8_t> reply(ServerQuery::kReplyHeaderSize + payload.size());
+  std::memcpy(reply.data(), ServerQuery::kReplyMagic.data(), ServerQuery::kReplyMagic.size());
+  std::memcpy(reply.data() + ServerQuery::kReplyMagic.size(), &token, sizeof(token));
+  std::memcpy(reply.data() + ServerQuery::kReplyHeaderSize, payload.data(), payload.size());
+
+  ENetBuffer buffer;
+  buffer.data       = reply.data();
+  buffer.dataLength = reply.size();
+  enet_socket_send(mServer->socket, &mServer->receivedAddress, &buffer, 1);
+  return 1;
+}
+
+bool EnetServer::AllowStatusReply(const ENetAddress& address)
+{
+  const enet_uint32 now = enet_time_get();
+
+  if (mLastStatusReply.size() > kMaxRateLimitEntries)
+  {
+    std::erase_if(mLastStatusReply, [now](const auto& entry)
+    {
+      return ENET_TIME_DIFFERENCE(now, entry.second) >= kStatusReplyIntervalMs;
+    });
+  }
+
+  const std::string key(reinterpret_cast<const char*>(&address.host), sizeof(address.host));
+  const auto [it, inserted] = mLastStatusReply.try_emplace(key, now);
+  if (inserted)
+    return true;
+
+  if (ENET_TIME_DIFFERENCE(now, it->second) < kStatusReplyIntervalMs)
+    return false;
+
+  it->second = now;
+  return true;
 }
 
 void EnetServer::ProcessEvents()

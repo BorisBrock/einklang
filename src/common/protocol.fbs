@@ -65,6 +65,23 @@ table RoomChatHistory {
 }
 
 // ----------------------------------------
+// Server status query (connectionless, see ServerQuery.h)
+// ----------------------------------------
+
+// Occupancy of a single room
+table RoomStatus {
+  name:string;
+  user_count:uint16;
+  max_users:uint16;
+}
+
+// Payload of a status query reply
+table ServerStatus {
+  server_version:string;
+  rooms:[RoomStatus];
+}
+
+// ----------------------------------------
 // Voice (binary, NOT FlatBuffers)
 // ----------------------------------------
 //

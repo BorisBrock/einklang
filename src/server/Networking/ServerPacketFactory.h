@@ -55,6 +55,10 @@ public:
                               const std::uint8_t* voicePayload,
                               std::size_t voicePayloadSize);
 
+  // Serialises a ServerStatus flatbuffer (the payload of a status query reply).
+  // Rooms are dropped from the end if needed to respect ServerQuery::kMaxReplySize.
+  static std::vector<std::uint8_t> BuildServerStatus(const std::vector<ChatRoom>& rooms);
+
 private:
   // Serialises a RoomUsersUpdate flatbuffer; returns the raw packet bytes
   // (type byte prepended).

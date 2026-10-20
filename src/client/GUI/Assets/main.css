@@ -229,6 +229,57 @@ html {
   cursor: wait;
 }
 
+/* ----- Server status & room occupancy ----- */
+
+.server-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-left: auto;
+  flex-shrink: 0;
+  background: var(--muted-border-color);  /* unknown: not polled yet */
+  cursor: help;
+}
+
+.server-status.online {
+  background: hsl(120, 60%, 55%);
+  box-shadow: 0 0 4px hsl(120, 60%, 55%);
+}
+
+.server-status.offline {
+  background: var(--del-color);
+}
+
+.server-card.offline .room-item:not(.active) {
+  opacity: 0.55;
+}
+
+.room-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-users {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: bold;
+  color: var(--muted-color);
+  cursor: help;
+}
+
+.room-users.empty {
+  font-weight: normal;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.room-item.active .room-users {
+  color: inherit;
+}
+
 /* ----- User list in the right column ----- */
 
 .user-item {

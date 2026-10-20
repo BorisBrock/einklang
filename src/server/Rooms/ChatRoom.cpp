@@ -62,6 +62,11 @@ void ChatRoom::RemoveUser(std::string_view userName)
 	});
 }
 
+std::size_t ChatRoom::UserCount() const
+{
+	return mUsers.size();
+}
+
 std::vector<std::string> ChatRoom::GetUserNames() const
 {
 	std::vector<std::string> names;
