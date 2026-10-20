@@ -39,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const serverEl   = document.getElementById("dlg-server");
   const portEl     = document.getElementById("dlg-port");
   const roomEl     = document.getElementById("dlg-room");
-  const usernameEl = document.getElementById("dlg-username");
   const passwordEl = document.getElementById("dlg-password");
   const connectBtn = document.getElementById("connect-btn");
   const cancelBtn  = document.getElementById("connect-cancel-btn");
@@ -53,13 +52,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const ok =
       serverEl.value.trim().length > 0 &&
       !isNaN(portVal) && portVal >= 1 && portVal <= 65535 &&
-      roomEl.value.trim().length > 0 &&
-      usernameEl.value.trim().length > 0 &&
-      usernameEl.value.trim().length <= 64;
+      roomEl.value.trim().length > 0;
     connectBtn.disabled = !ok;
   }
 
-  [serverEl, portEl, roomEl, usernameEl, passwordEl].forEach((el) =>
+  [serverEl, portEl, roomEl, passwordEl].forEach((el) =>
     el.addEventListener("input", validate)
   );
 
@@ -86,7 +83,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const server   = serverEl.value.trim();
     const port     = parseInt(portEl.value, 10);
     const room     = roomEl.value.trim();
-    const username = usernameEl.value.trim();
     const password = passwordEl.value; // password may be empty
 
     // Hide previous error and show loading state
@@ -95,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     connectBtn.textContent = "Connecting\u2026";
 
     try {
-      await window.saucer.exposed.connect_to_server(server, port, room, password, username);
+      await window.saucer.exposed.connect_to_server(server, port, room, password);
       // Result arrives asynchronously via handleRoomEntryResponse() called from C++
     } catch (err) {
       console.error("Failed to call C++:", err);

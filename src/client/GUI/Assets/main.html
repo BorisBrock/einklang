@@ -93,17 +93,9 @@
           </div>
         </div>
 
-        <!-- Row 2: Room name + User name -->
-        <div class="dlg-row">
-          <div class="dlg-col">
-            <label for="dlg-room">Chat room</label>
-            <input type="text" id="dlg-room" placeholder="Room name" autocomplete="off" />
-          </div>
-          <div class="dlg-col">
-            <label for="dlg-username">User name</label>
-            <input type="text" id="dlg-username" placeholder="Your name" autocomplete="off" maxlength="64" />
-          </div>
-        </div>
+        <!-- Row 2: Room name (full width) -->
+        <label for="dlg-room">Chat room</label>
+        <input type="text" id="dlg-room" placeholder="Room name" autocomplete="off" />
 
         <!-- Row 3: Password (full width) -->
         <label for="dlg-password">Password <small>(leave empty if none)</small></label>
@@ -135,10 +127,6 @@
           </div>
         </div>
 
-        <!-- Row 2: User name (applies to every room on this server) -->
-        <label for="edit-server-username">User name <small id="edit-server-username-hint">(used for all rooms on this server)</small></label>
-        <input type="text" id="edit-server-username" placeholder="Your name" autocomplete="off" maxlength="64" />
-
         <footer>
           <button class="secondary" id="edit-server-cancel-btn">Cancel</button>
           <button id="edit-server-save-btn" disabled>Save</button>
@@ -155,7 +143,11 @@
 
         <div class="settings-body">
           <nav class="settings-nav" aria-label="Settings sections">
-            <button type="button" class="settings-nav-item active" data-section="appearance">
+            <button type="button" class="settings-nav-item active" data-section="profile">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Profile
+            </button>
+            <button type="button" class="settings-nav-item" data-section="appearance">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.56-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/></svg>
               Appearance
             </button>
@@ -166,7 +158,20 @@
           </nav>
 
           <div class="settings-panels">
-            <section class="settings-panel" data-section="appearance">
+            <section class="settings-panel" data-section="profile">
+              <h4 class="settings-section-title">You</h4>
+              <p class="settings-section-hint">Your name is shown to others in every chat room.</p>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label for="profile-username">User name</label>
+                </div>
+                <p class="settings-field-desc">Takes effect the next time you join a room.</p>
+                <input type="text" id="profile-username" placeholder="Your name" autocomplete="off" maxlength="64" />
+              </div>
+            </section>
+
+            <section class="settings-panel" data-section="appearance" hidden>
               <h4 class="settings-section-title">Theme</h4>
               <p class="settings-section-hint">Previewed instantly, saved when you press Save.</p>
               <div id="theme-grid" class="theme-grid" role="radiogroup" aria-label="Theme"></div>

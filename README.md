@@ -158,6 +158,7 @@ cd build/Release
 
 | Key | Description |
 |---|---|
+| `user-name` | Your name in all chat rooms (defaults to the OS login name; editable under Settings → Profile) |
 | `voice-enabled` | Enable/disable voice chat on the client |
 | `input-gain` | Microphone gain multiplier |
 | `output-volume` | Speaker volume multiplier |
@@ -166,7 +167,7 @@ cd build/Release
 | `vad-attack-frames` / `vad-release-frames` | Frames needed to open / held open after speech stops |
 | `vad-zcr-min` / `vad-zcr-max` | Speech-like zero-crossing-rate band (crossings/s) |
 | `noise-filter` | High-pass IIR filter to remove low-frequency noise (fan hum, etc.) |
-| `known-rooms` | Saved server connections (address, port, room, username, password) |
+| `known-rooms` | Saved server connections (address, port, room, password) |
 
 ---
 

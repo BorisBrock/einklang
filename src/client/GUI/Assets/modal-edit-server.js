@@ -5,15 +5,11 @@
 let _editServerTarget = null; // { address, port } of the server being edited
 
 // Opens the dialog pre-filled with the server's current settings.
-// userName may be empty when the rooms on this server use different names.
-function openEditServerDialog(address, port, userName) {
+function openEditServerDialog(address, port) {
   _editServerTarget = { address, port };
 
   document.getElementById("edit-server-address").value  = address;
   document.getElementById("edit-server-port").value     = String(port);
-  document.getElementById("edit-server-username").value = userName;
-  document.getElementById("edit-server-username").placeholder =
-    userName ? "Your name" : "Leave empty to keep per-room names";
 
   window.showModal("edit-server-dialog");
 }
@@ -22,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const dialog     = document.getElementById("edit-server-dialog");
   const addressEl  = document.getElementById("edit-server-address");
   const portEl     = document.getElementById("edit-server-port");
-  const usernameEl = document.getElementById("edit-server-username");
   const saveBtn    = document.getElementById("edit-server-save-btn");
   const cancelBtn  = document.getElementById("edit-server-cancel-btn");
   const errorEl    = document.getElementById("edit-server-error");
@@ -34,12 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const portVal = parseInt(portEl.value, 10);
     const ok =
       addressEl.value.trim().length > 0 &&
-      !isNaN(portVal) && portVal >= 1 && portVal <= 65535 &&
-      usernameEl.value.trim().length <= 64;
+      !isNaN(portVal) && portVal >= 1 && portVal <= 65535;
     saveBtn.disabled = !ok;
   }
 
-  [addressEl, portEl, usernameEl].forEach((el) =>
+  [addressEl, portEl].forEach((el) =>
     el.addEventListener("input", validate)
   );
 
@@ -66,7 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const { address: oldAddress, port: oldPort } = _editServerTarget;
     const newAddress = addressEl.value.trim();
     const newPort    = parseInt(portEl.value, 10);
-    const userName   = usernameEl.value.trim(); // empty = keep per-room names
 
     // Remember the active room so its highlight survives the list rebuild.
     // If it is on the edited server, C++ disconnects and clears it instead.
@@ -80,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const json = await window.saucer.exposed.edit_server(
-        oldAddress, oldPort, newAddress, newPort, userName);
+        oldAddress, oldPort, newAddress, newPort);
       _populateRoomList(JSON.parse(json));
 
       if (keepActive) {

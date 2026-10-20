@@ -1,4 +1,6 @@
-last-used-user-name: "User"
+# Your name in all chat rooms. If empty, it defaults to your OS login name.
+user-name: ""
+
 last-used-server-address: "localhost"
 last-used-room-name: "Test Room"
 last-used-server-port: 24816
@@ -42,20 +44,16 @@ known-rooms:
   - address: 127.0.0.1
     port: 24816
     room-name: Lobby
-    user-name: Alice1
     password: lobby123
   - address: 127.0.0.1
     port: 24816
     room-name: Game Room 1
-    user-name: Alice2
     password: game123
   - address: 192.168.178.86
     port: 24816
     room-name: Lobby
-    user-name: Alice3
     password: lobby123
   - address: 192.168.178.86
     port: 24816
     room-name: Game Room 1
-    user-name: Alice4
     password: game123

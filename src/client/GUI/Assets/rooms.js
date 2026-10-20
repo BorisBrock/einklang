@@ -45,8 +45,13 @@ function handleRoomEntryResponse(success, errorMessage) {
   }
 }
 
+// The user name the active room was entered with (null when not in a room)
+let _activeUserName = null;
+
 // Called by C++ via webview->execute() to mark a room as active in the GUI
-function setActiveRoom(address, port, roomName) {
+function setActiveRoom(address, port, roomName, userName) {
+  _activeUserName = userName;
+
   document.querySelectorAll(".room-item").forEach((el) => {
     el.classList.remove("active");
   });
@@ -83,7 +88,7 @@ function setActiveRoom(address, port, roomName) {
 }
 
 // Called by C++ (via execute) after a new room connection is saved to config
-function addKnownRoom(address, port, roomName, userName) {
+function addKnownRoom(address, port, roomName) {
   const container = document.getElementById("rooms-list");
   if (!container) return;
 
@@ -98,14 +103,11 @@ function addKnownRoom(address, port, roomName, userName) {
     ).find((el) => el.dataset.room === roomName);
 
     if (!existingItem) {
-      list.appendChild(_makeRoomItem(address, port, roomName, userName || ""));
+      list.appendChild(_makeRoomItem(address, port, roomName));
       _applyServerStatus(existingCard);
-    } else {
-      // Update the stored userName if we now have one
-      if (userName) existingItem.dataset.userName = userName;
     }
   } else {
-    container.appendChild(_buildServerCard(address, port, [{ roomName, userName: userName || "" }]));
+    container.appendChild(_buildServerCard(address, port, [roomName]));
   }
 }
 
@@ -113,13 +115,12 @@ function addKnownRoom(address, port, roomName, userName) {
 // Room list DOM helpers
 // ---------------------------------------------------------------------------
 
-function _makeRoomItem(address, port, roomName, userName) {
+function _makeRoomItem(address, port, roomName) {
   const item = document.createElement("div");
   item.className        = "room-item";
   item.dataset.address  = address;
   item.dataset.port     = String(port);
   item.dataset.room     = roomName;
-  item.dataset.userName = userName;
 
   const roomIcon = document.createElement("span");
   roomIcon.className = "room-icon";
@@ -153,7 +154,7 @@ function _makeRoomItem(address, port, roomName, userName) {
     item.classList.add("loading");
 
     try {
-      await window.saucer.exposed.switch_to_room(address, port, roomName, item.dataset.userName);
+      await window.saucer.exposed.switch_to_room(address, port, roomName);
       // Result arrives asynchronously via handleRoomEntryResponse() / setActiveRoom() from C++
     } catch (err) {
       console.error("Failed to call C++:", err);
@@ -168,7 +169,7 @@ function _makeRoomItem(address, port, roomName, userName) {
   return item;
 }
 
-function _buildServerCard(address, port, rooms) {
+function _buildServerCard(address, port, roomNames) {
   const key = address + ":" + port;
   const card = document.createElement("div");
   card.className = "server-card";
@@ -196,8 +197,8 @@ function _buildServerCard(address, port, rooms) {
 
   const list = document.createElement("div");
   list.className = "room-list";
-  for (const r of rooms) {
-    list.appendChild(_makeRoomItem(address, port, r.roomName, r.userName));
+  for (const roomName of roomNames) {
+    list.appendChild(_makeRoomItem(address, port, roomName));
   }
   card.appendChild(list);
   _applyServerStatus(card);
@@ -216,7 +217,7 @@ function _populateRoomList(rooms) {
     const key = room.address + ":" + room.port;
     if (!servers.has(key))
       servers.set(key, { address: room.address, port: room.port, rooms: [] });
-    servers.get(key).rooms.push({ roomName: room.roomName, userName: room.userName });
+    servers.get(key).rooms.push(room.roomName);
   }
 
   for (const [, srv] of servers) {
@@ -381,6 +382,7 @@ function setReconnecting(reconnecting) {
 
 function clearActiveRoom() {
   setReconnecting(false);
+  _activeUserName = null;
 
   // Remove active highlighting from all room items
   document.querySelectorAll(".room-item.active").forEach((el) => {
@@ -532,16 +534,10 @@ document.addEventListener("contextmenu", (e) => {
     const address = key.slice(0, colonIdx);
     const port    = parseInt(key.slice(colonIdx + 1), 10);
 
-    // Pre-fill the user name only when all rooms on the server share one
-    const userNames = new Set(
-      Array.from(card.querySelectorAll(".room-item")).map((el) => el.dataset.userName)
-    );
-    const userName = userNames.size === 1 ? [...userNames][0] : "";
-
     _showContextMenu(e.pageX, e.pageY, [
       {
         label: "Edit Server", icon: _CTX_ICON_EDIT,
-        callback: () => openEditServerDialog(address, port, userName),
+        callback: () => openEditServerDialog(address, port),
       },
       {
         label: "Remove Server", icon: _CTX_ICON_REMOVE, danger: true,

@@ -67,7 +67,6 @@ void RoomEntryConnector::Connect(EnetClient& enetClient, WebViewModel& viewModel
         ClientConfig& config = configManager.Get();
         config.lastUsedServerAddress = pending->server;
         config.lastUsedRoomName      = pending->room;
-        config.lastUsedUserName      = pending->userName;
         config.lastUsedServerPort    = pending->port;
 
         // Add or update the matching known-room entry
@@ -80,17 +79,14 @@ void RoomEntryConnector::Connect(EnetClient& enetClient, WebViewModel& viewModel
 
         if (it != config.knownRooms.end())
         {
-          it->userName = pending->userName;
           it->password = pending->password;
         }
         else
         {
           config.knownRooms.push_back({pending->server, pending->port,
-                                       pending->room, pending->userName,
-                                       pending->password});
+                                       pending->room, pending->password});
           viewModel.AddKnownRoom({pending->server, pending->port,
-                                  pending->room, pending->userName,
-                                  pending->password});
+                                  pending->room, pending->password});
         }
 
         if (!configManager.Save())
@@ -99,7 +95,7 @@ void RoomEntryConnector::Connect(EnetClient& enetClient, WebViewModel& viewModel
         }
 
         // Highlight the newly active room in the GUI
-        viewModel.SetActiveRoom(pending->server, pending->port, pending->room);
+        viewModel.SetActiveRoom(pending->server, pending->port, pending->room, pending->userName);
       }
       else
       {

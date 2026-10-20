@@ -77,11 +77,10 @@ int WebUI::Run()
     mViewModel.onRoomAdded.subscribe([this](const ClientConfig::KnownRoom& room)
     {
       if (!mExecuteJs) return;
-      mExecuteJs(std::format("addKnownRoom(\"{}\", {}, \"{}\", \"{}\")",
+      mExecuteJs(std::format("addKnownRoom(\"{}\", {}, \"{}\")",
                              JsUtils::EscapeString(room.address),
                              room.port,
-                             JsUtils::EscapeString(room.roomName),
-                             JsUtils::EscapeString(room.userName)));
+                             JsUtils::EscapeString(room.roomName)));
     });
 
     mViewModel.onRoomEntryResult.subscribe([this](bool success, const std::string& errorMessage)
@@ -93,13 +92,15 @@ int WebUI::Run()
     });
 
     mViewModel.onActiveRoomChanged.subscribe([this](const std::string& address, uint16_t port,
-                                                    const std::string& roomName)
+                                                    const std::string& roomName,
+                                                    const std::string& userName)
     {
       if (!mExecuteJs) return;
-      mExecuteJs(std::format("setActiveRoom(\"{}\", {}, \"{}\")",
+      mExecuteJs(std::format("setActiveRoom(\"{}\", {}, \"{}\", \"{}\")",
                              JsUtils::EscapeString(address),
                              port,
-                             JsUtils::EscapeString(roomName)));
+                             JsUtils::EscapeString(roomName),
+                             JsUtils::EscapeString(userName)));
     });
 
     mViewModel.onNewChatMessage.subscribe([this](const std::string& userName, const std::string& text)
@@ -207,15 +208,14 @@ int WebUI::Run()
     });
 
     webview->expose("connect_to_server", [this](std::string server, int port, std::string room,
-                                                std::string password, std::string username) {
+                                                std::string password) {
       mViewModel.HandleConnectToServer(std::move(server), static_cast<uint16_t>(port),
-                                       std::move(room), std::move(password), std::move(username));
+                                       std::move(room), std::move(password));
     });
 
-    webview->expose("switch_to_room", [this](std::string address, int port,
-                                             std::string roomName, std::string userName) {
+    webview->expose("switch_to_room", [this](std::string address, int port, std::string roomName) {
       mViewModel.HandleSwitchToRoom(std::move(address), static_cast<uint16_t>(port),
-                                    std::move(roomName), std::move(userName));
+                                    std::move(roomName));
     });
 
     webview->expose("get_known_rooms", [this]() -> std::string {
@@ -252,6 +252,22 @@ int WebUI::Run()
       mConfigManager.Save();
       mViewModel.HandleSetVoiceSettings(static_cast<float>(vad),
                                         static_cast<float>(gain));
+    });
+
+    webview->expose("get_user_name", [this]() -> std::string {
+      return mConfigManager.Get().userName;
+    });
+
+    // Takes effect on the next room entry. Returns false if the name is invalid.
+    webview->expose("save_user_name", [this](std::string userName) -> bool {
+      const auto first = userName.find_first_not_of(" \t");
+      if (first == std::string::npos) return false;
+      userName = userName.substr(first, userName.find_last_not_of(" \t") - first + 1);
+      if (userName.size() > 64) return false;
+      mConfigManager.Get().userName = userName;
+      mConfigManager.Save();
+      mViewModel.SetUserName(std::move(userName));
+      return true;
     });
 
     webview->expose("get_theme", [this]() -> std::string {
@@ -317,20 +333,19 @@ int WebUI::Run()
     });
 
     webview->expose("edit_server", [this](std::string oldAddress, int oldPort,
-                                          std::string newAddress, int newPort,
-                                          std::string userName) -> std::string {
-      if (newAddress.empty() || newPort < 1 || newPort > 65535 || userName.size() > 64)
+                                          std::string newAddress, int newPort) -> std::string {
+      if (newAddress.empty() || newPort < 1 || newPort > 65535)
         return mViewModel.GetKnownRoomsJson();
 
       // Update persisted config first
       auto& cfg = mConfigManager.Get();
       if (WebViewModel::EditServerRooms(cfg.knownRooms, oldAddress, static_cast<uint16_t>(oldPort),
-                                        newAddress, static_cast<uint16_t>(newPort), userName))
+                                        newAddress, static_cast<uint16_t>(newPort)))
         mConfigManager.Save();
 
       // Update the view-model (fires onActiveRoomLeft if the active room was on this server)
       return mViewModel.HandleEditServer(oldAddress, static_cast<uint16_t>(oldPort),
-                                         newAddress, static_cast<uint16_t>(newPort), userName);
+                                         newAddress, static_cast<uint16_t>(newPort));
     });
 
     window->show();

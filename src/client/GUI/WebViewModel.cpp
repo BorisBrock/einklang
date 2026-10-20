@@ -10,6 +10,11 @@ void WebViewModel::SetKnownRooms(std::vector<ClientConfig::KnownRoom> rooms)
   mKnownRooms = std::move(rooms);
 }
 
+void WebViewModel::SetUserName(std::string userName)
+{
+  mUserName = std::move(userName);
+}
+
 void WebViewModel::AddKnownRoom(const ClientConfig::KnownRoom& room)
 {
   const bool exists = std::ranges::any_of(mKnownRooms, [&](const ClientConfig::KnownRoom& r)
@@ -93,12 +98,12 @@ void WebViewModel::HandleChatImage(std::vector<std::uint8_t> imageData)
 }
 
 void WebViewModel::HandleConnectToServer(std::string server, uint16_t port, std::string room,
-                                         std::string password, std::string username)
+                                         std::string password)
 {
   CancelReconnectForUserAction();
-  mLocalUserName = username;
+  mLocalUserName = mUserName;
   onConnectToServer.emit(std::move(server), port, std::move(room),
-                         std::move(password), std::move(username));
+                         std::move(password), mUserName);
 }
 
 void WebViewModel::HandleVoiceMuteToggle(bool muted)
@@ -121,12 +126,11 @@ float WebViewModel::GetInputRms() const
   return mInputRmsGetter ? mInputRmsGetter() : 0.0f;
 }
 
-void WebViewModel::HandleSwitchToRoom(std::string address, uint16_t port,
-                                      std::string roomName, std::string userName)
+void WebViewModel::HandleSwitchToRoom(std::string address, uint16_t port, std::string roomName)
 {
   CancelReconnectForUserAction();
-  mLocalUserName = userName;
-  onSwitchToRoom.emit(std::move(address), port, std::move(roomName), std::move(userName));
+  mLocalUserName = mUserName;
+  onSwitchToRoom.emit(std::move(address), port, std::move(roomName), mUserName);
 }
 
 void WebViewModel::HandleRemoveRoom(std::string address, uint16_t port, std::string roomName)
@@ -172,13 +176,11 @@ void WebViewModel::HandleRemoveServer(std::string address, uint16_t port)
 }
 
 std::string WebViewModel::HandleEditServer(const std::string& oldAddress, uint16_t oldPort,
-                                           const std::string& newAddress, uint16_t newPort,
-                                           const std::string& userName)
+                                           const std::string& newAddress, uint16_t newPort)
 {
   const bool activeWasHere = (mActiveAddress == oldAddress && mActivePort == oldPort);
 
-  const bool changed = EditServerRooms(mKnownRooms, oldAddress, oldPort,
-                                       newAddress, newPort, userName);
+  const bool changed = EditServerRooms(mKnownRooms, oldAddress, oldPort, newAddress, newPort);
   if (changed)
     onKnownRoomsChanged.emit();
 
@@ -199,8 +201,7 @@ std::string WebViewModel::HandleEditServer(const std::string& oldAddress, uint16
 // static
 bool WebViewModel::EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
                                    const std::string& oldAddress, uint16_t oldPort,
-                                   const std::string& newAddress, uint16_t newPort,
-                                   const std::string& userName)
+                                   const std::string& newAddress, uint16_t newPort)
 {
   const bool sameServer = (oldAddress == newAddress && oldPort == newPort);
   bool changed = false;
@@ -211,19 +212,11 @@ bool WebViewModel::EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
   for (auto& r : rooms)
   {
     const bool onServer = (r.address == oldAddress && r.port == oldPort);
-    if (onServer)
+    if (onServer && !sameServer)
     {
-      if (!sameServer)
-      {
-        r.address = newAddress;
-        r.port    = newPort;
-        changed   = true;
-      }
-      if (!userName.empty() && r.userName != userName)
-      {
-        r.userName = userName;
-        changed    = true;
-      }
+      r.address = newAddress;
+      r.port    = newPort;
+      changed   = true;
     }
 
     // When moving onto a server that is already known, merging can produce
@@ -243,12 +236,12 @@ bool WebViewModel::EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
 }
 
 void WebViewModel::SetActiveRoom(const std::string& address, uint16_t port,
-                                 const std::string& roomName)
+                                 const std::string& roomName, const std::string& userName)
 {
   mActiveAddress = address;
   mActivePort    = port;
   mActiveRoom    = roomName;
-  onActiveRoomChanged.emit(address, port, roomName);
+  onActiveRoomChanged.emit(address, port, roomName, userName);
 }
 
 void WebViewModel::NotifyNewChatMessage(const std::string& userName, const std::string& text)
@@ -347,11 +340,10 @@ std::string WebViewModel::BuildRoomsJson(const std::vector<ClientConfig::KnownRo
     if (i > 0)
       json += ",";
     json += std::format(
-      R"({{"address":"{}","port":{},"roomName":"{}","userName":"{}"}})",
+      R"({{"address":"{}","port":{},"roomName":"{}"}})",
       JsUtils::EscapeString(rooms[i].address),
       rooms[i].port,
-      JsUtils::EscapeString(rooms[i].roomName),
-      JsUtils::EscapeString(rooms[i].userName));
+      JsUtils::EscapeString(rooms[i].roomName));
   }
   json += "]";
   return json;

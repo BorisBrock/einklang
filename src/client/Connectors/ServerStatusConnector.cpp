@@ -13,7 +13,7 @@ void ServerStatusConnector::Connect(WebViewModel& viewModel, ServerStatusPoller&
   });
 
   // Entering a room changes occupancy (also of the room just left) — refresh now
-  viewModel.onActiveRoomChanged.subscribe([&poller](const std::string&, uint16_t, const std::string&)
+  viewModel.onActiveRoomChanged.subscribe([&poller](const std::string&, uint16_t, const std::string&, const std::string&)
   {
     poller.RequestRefresh();
   });

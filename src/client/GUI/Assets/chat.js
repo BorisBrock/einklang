@@ -136,10 +136,9 @@ function _linkifyMessage(text) {
   return fragment;
 }
 
-// Returns the username of the local user (from the active room item)
+// Returns the user name the local user entered the active room with
 function getCurrentUsername() {
-  const active = document.querySelector(".room-item.active");
-  return active ? active.dataset.userName : null;
+  return _activeUserName;
 }
 
 // Called from C++ via WebUI when a new chat message arrives from the server

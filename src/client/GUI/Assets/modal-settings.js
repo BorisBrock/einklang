@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const meterBar     = document.getElementById("level-meter-bar");
   const meterThresh  = document.getElementById("level-meter-threshold");
   const themeGrid    = document.getElementById("theme-grid");
+  const userNameEl   = document.getElementById("profile-username");
   const navItems     = dialog ? dialog.querySelectorAll(".settings-nav-item") : [];
   const panels       = dialog ? dialog.querySelectorAll(".settings-panel") : [];
 
@@ -22,6 +23,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   navItems.forEach(item => item.addEventListener("click", () => showSection(item.dataset.section)));
+
+  // ---------------------------------------------------------------------------
+  // Profile: the user name must not be empty
+  // ---------------------------------------------------------------------------
+  function validateUserName() {
+    const valid = userNameEl.value.trim().length > 0;
+    userNameEl.setAttribute("aria-invalid", valid ? "false" : "true");
+    okBtn.disabled = !valid;
+  }
+
+  userNameEl.addEventListener("input", validateUserName);
 
   // ---------------------------------------------------------------------------
   // Theme picker: one card per theme, each previewing its own palette
@@ -124,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let savedVad   = VAD_MIN;
   let savedGain  = 1.0;
   let savedTheme = getCurrentTheme();
+  let savedUserName = "";
 
   // ---------------------------------------------------------------------------
   // Dialog lifecycle
@@ -132,6 +145,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (dialog.open) {
       savedTheme = getCurrentTheme();
       markSelectedTheme(savedTheme);
+
+      try {
+        if (window.saucer?.exposed?.get_user_name)
+          savedUserName = await window.saucer.exposed.get_user_name();
+      } catch { /* keep previous value */ }
+      userNameEl.value = savedUserName;
+      userNameEl.removeAttribute("aria-invalid");
+      okBtn.disabled = false;
 
       // Load current settings from the backend and populate sliders.
       try {
@@ -203,6 +224,10 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(() => {});
     }
     if (getCurrentTheme() !== savedTheme) saveTheme(getCurrentTheme());
+    const userName = userNameEl.value.trim();
+    if (userName && userName !== savedUserName && window.saucer?.exposed?.save_user_name) {
+      window.saucer.exposed.save_user_name(userName).catch(() => {});
+    }
     window.closeModal(dialog);
   });
 

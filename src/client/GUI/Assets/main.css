@@ -1134,8 +1134,27 @@ dialog input:not([type=range]):not([type=checkbox]):not([type=radio]) {
   border-radius: var(--radius-sm);
 }
 
-dialog article > input:not([type=range]) {
+/* Selector mirrors the rule above so it outranks its margin-bottom: 0 */
+dialog article > input:not([type=range]):not([type=checkbox]):not([type=radio]) {
   margin-bottom: 0.75rem;
+}
+
+/* The footer brings its own top margin; don't stack the field gap on it */
+dialog article > input:not([type=range]):not([type=checkbox]):not([type=radio]):has(+ footer),
+dialog article > .dlg-row:has(+ footer) {
+  margin-bottom: 0;
+}
+
+/* Hide the spin buttons on number inputs (port fields) */
+dialog input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+dialog input[type=number]::-webkit-outer-spin-button,
+dialog input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 dialog button {

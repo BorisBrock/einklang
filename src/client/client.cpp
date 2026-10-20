@@ -66,8 +66,13 @@ int main(int argc, char* argv[])
     if (voiceEnabled)
         voicePipeline.ApplyConfig(configManager.Get());
 
-    // Seed room list from config before starting the GUI
+    // Default the user name to the OS login if none has been set yet
+    if (configManager.Get().userName.empty())
+        configManager.Get().userName = ConfigManager::GetOsUserName();
+
+    // Seed room list and user name from config before starting the GUI
     viewModel.SetKnownRooms(configManager.Get().knownRooms);
+    viewModel.SetUserName(configManager.Get().userName);
 
     // Connect components
     ChatConnector::Connect(viewModel, enetClient);

@@ -33,6 +33,9 @@ public:
   // Seed the room list before the GUI starts (call before WebUI::Run())
   void SetKnownRooms(std::vector<ClientConfig::KnownRoom> rooms);
 
+  // Set the user name used for future room entries (from the profile settings)
+  void SetUserName(std::string userName);
+
   // Add a single room (deduplicates); fires onRoomAdded if the room is new
   void AddKnownRoom(const ClientConfig::KnownRoom& room);
 
@@ -45,14 +48,16 @@ public:
   // reconnecting state (fires onReconnectingChanged) and returns true.
   bool BeginReconnect();
 
-  // Re-enters the active room with the last used user name (fires onSwitchToRoom).
+  // Re-enters the active room with the user name of the lost session (fires onSwitchToRoom).
   // Does nothing unless reconnecting.
   void ReconnectToActiveRoom();
 
   bool IsReconnecting() const { return mReconnecting; }
 
-  // Mark a room as the currently active room; fires onActiveRoomChanged
-  void SetActiveRoom(const std::string& address, uint16_t port, const std::string& roomName);
+  // Mark a room as the currently active room; fires onActiveRoomChanged.
+  // userName is the name the room was entered with.
+  void SetActiveRoom(const std::string& address, uint16_t port, const std::string& roomName,
+                     const std::string& userName);
 
   // Notify the GUI of an incoming chat message; fires onNewChatMessage
   void NotifyNewChatMessage(const std::string& userName, const std::string& text);
@@ -88,15 +93,18 @@ public:
   static std::string BuildServerStatusJson(const std::string& address, uint16_t port,
                                            const ServerStatus& status);
 
-  // Returns the username the local user connected with (empty before first login)
+  // Returns the user name the local user entered the current room with
+  // (empty before first login). May differ from the profile name if that was
+  // changed since.
   const std::string& GetLocalUserName() const { return mLocalUserName; }
 
   // --- Called from the WebUI bridge (JS → VM) ---
 
   void HandleChatMessage(std::string msg);
   void HandleChatImage(std::vector<std::uint8_t> imageData);
+  // Enters a room with the profile user name.
   void HandleConnectToServer(std::string server, uint16_t port, std::string room,
-                             std::string password, std::string username);
+                             std::string password);
 
   // Called when the user clicks the mute/unmute button in the GUI.
   void HandleVoiceMuteToggle(bool muted);
@@ -112,9 +120,8 @@ public:
   float GetInputRms() const;
 
   // Called when the user clicks a known room in the list to switch into it.
-  // address/port identify the server; userName is the previously-used name.
-  void HandleSwitchToRoom(std::string address, uint16_t port,
-                          std::string roomName, std::string userName);
+  // address/port identify the server; the profile user name is used.
+  void HandleSwitchToRoom(std::string address, uint16_t port, std::string roomName);
 
   // Remove a single known room from the model & config; disconnects if active.
   void HandleRemoveRoom(std::string address, uint16_t port, std::string roomName);
@@ -122,19 +129,17 @@ public:
   // Remove all known rooms for a server; disconnects if the active room is on it.
   void HandleRemoveServer(std::string address, uint16_t port);
 
-  // Change address/port/user name of all known rooms on a server; disconnects
+  // Change address/port of all known rooms on a server; disconnects
   // if the active room is on it. Returns the updated room list as JSON.
   std::string HandleEditServer(const std::string& oldAddress, uint16_t oldPort,
-                               const std::string& newAddress, uint16_t newPort,
-                               const std::string& userName);
+                               const std::string& newAddress, uint16_t newPort);
 
   // Applies a server edit to a room list (shared by the view-model and the
   // persisted config). Rooms that would collide with an existing room on the
   // target server are dropped. Returns true if anything changed.
   static bool EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
                               const std::string& oldAddress, uint16_t oldPort,
-                              const std::string& newAddress, uint16_t newPort,
-                              const std::string& userName);
+                              const std::string& newAddress, uint16_t newPort);
 
   // --- Events: VM → C++  (Connectors subscribe to these) ---
 
@@ -176,8 +181,8 @@ public:
   // GUI resets to the idle state.
   Event<>                                                  onReconnectCancelled;
 
-  // Fired when the active room changes. Args: address, port, roomName
-  Event<std::string, uint16_t, std::string>                onActiveRoomChanged;
+  // Fired when the active room changes. Args: address, port, roomName, userName
+  Event<std::string, uint16_t, std::string, std::string>   onActiveRoomChanged;
 
   // Fired when the server delivers a new chat message. Args: userName, text
   Event<std::string, std::string>                          onNewChatMessage;
@@ -214,7 +219,10 @@ private:
 
   std::vector<ClientConfig::KnownRoom> mKnownRooms;
 
-  // The username the local user last connected with.
+  // The user name from the profile settings, used for new room entries.
+  std::string mUserName;
+
+  // The user name the local user last connected with.
   std::string mLocalUserName;
 
   // Tracks the currently active room so removal can detect a conflict.

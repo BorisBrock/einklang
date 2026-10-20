@@ -6,7 +6,10 @@
 
 struct ClientConfig
 {
-      std::string lastUsedUserName{"User"};
+      // Name shown to other users in every room. Empty until set; the client
+      // fills it from the OS login on startup (see ConfigManager::GetOsUserName).
+      std::string userName;
+
       std::string lastUsedServerAddress{"localhost"};
       std::string lastUsedRoomName{"Test Room"};
       uint16_t lastUsedServerPort{24816};
@@ -16,7 +19,6 @@ struct ClientConfig
             std::string address;
             uint16_t port;
             std::string roomName;
-            std::string userName;
             std::string password;
       };
 
