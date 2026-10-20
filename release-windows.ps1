@@ -5,9 +5,13 @@
 #   • EinklangServer_Portable_Windows_<version>.zip
 #   • EinklangClient_Portable_Windows_<version>.zip
 #
-# Usage:  .\release-windows.ps1
+# Usage:  .\release-windows.ps1 <version>     (e.g. 1.0.0 — normally the git tag without 'v')
 # =============================================================================
 #Requires -Version 5.1
+param(
+    [Parameter(Mandatory = $true)]
+    [string] $Version
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -17,28 +21,12 @@ $ErrorActionPreference = 'Stop'
 $RootDir    = $PSScriptRoot
 $BuildDir   = Join-Path $RootDir 'build\Release'
 $ReleaseDir = Join-Path $RootDir 'release'
-$VersionHeader = Join-Path $RootDir 'src\common\Version.h'
 
 # ---------------------------------------------------------------------------
-# Step 0 — Read the version number from Version.h
+# Step 0 — Version (compiled into the binaries)
 # ---------------------------------------------------------------------------
-Write-Host "==> Reading version from $VersionHeader"
-
-$versionLine = Select-String -Path $VersionHeader -Pattern 'EINKLANG_VERSION_STRING' |
-    Select-Object -First 1 -ExpandProperty Line
-
-if (-not $versionLine) {
-    Write-Error "Could not find EINKLANG_VERSION_STRING in $VersionHeader"
-    exit 1
-}
-
-if ($versionLine -notmatch '"([^"]+)"') {
-    Write-Error "Could not parse version string from: $versionLine"
-    exit 1
-}
-
-$Version = $Matches[1]
-Write-Host "    Version: $Version"
+$Version = $Version -replace '^v', ''
+Write-Host "==> Version: $Version"
 
 # ---------------------------------------------------------------------------
 # Step 1 — Prepare the release output folder
@@ -62,7 +50,8 @@ Write-Host "==> Configuring CMake (Release)"
 
 cmake -S $RootDir -B $BuildDir `
     -DCMAKE_BUILD_TYPE=Release `
-    -DEINKLANG_BUILD_CLIENT=ON
+    -DEINKLANG_BUILD_CLIENT=ON `
+    "-DEINKLANG_VERSION=$Version"
 
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

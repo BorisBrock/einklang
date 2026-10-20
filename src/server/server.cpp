@@ -8,7 +8,6 @@
 #include <string>
 #include <string_view>
 #include <stdint.h>
-#include "../common/Version.h"
 #include "Networking/EnetServer.h"
 #include "Networking/ServerPacketFactory.h"
 #include "Networking/StatusProbe.h"

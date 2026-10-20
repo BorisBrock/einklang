@@ -9,6 +9,7 @@
 #include <saucer/embedded/all.hpp>
 #ifdef _WIN32
 #  include <windows.h>
+#  include <shellapi.h> // ShellExecuteW; excluded by WIN32_LEAN_AND_MEAN
 // Provide the win32 stable_natives<window> specialization without including
 // webview2.hpp, which would drag in the WebView2 SDK header (not in our path).
 // module.hpp (pulled in by smartview.hpp) declares the base template.
@@ -37,7 +38,7 @@ int WebUI::Run()
 
     mExecuteJs = [&webview](const std::string& js) { webview->saucer::webview::execute(js); };
 
-    window->set_title("Einklang");
+    window->set_title("Einklang " EINKLANG_VERSION_STRING);
     {
       auto& cfg = mConfigManager.Get();
       window->set_size({cfg.windowWidth, cfg.windowHeight});
@@ -279,6 +280,10 @@ int WebUI::Run()
       cfg.outputDevice = output;
       mConfigManager.Save();
       mViewModel.HandleSetAudioDevices(std::move(input), std::move(output));
+    });
+
+    webview->expose("get_app_version", []() -> std::string {
+      return EINKLANG_VERSION_STRING;
     });
 
     webview->expose("get_user_name", [this]() -> std::string {

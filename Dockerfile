@@ -22,6 +22,10 @@ WORKDIR /src
 COPY CMakeLists.txt .
 COPY src/ src/
 
+# Version compiled into the server; CI passes the release tag's version.
+# Without it the build reports 0.0.0-dev (.git is not in the build context).
+ARG EINKLANG_VERSION=""
+
 # Configure — Release build, server target only.
 # Saucer (GUI/webview) is a client-only dependency; the server does not use it.
 # We disable it explicitly so it (and the audio libraries) are not fetched.
@@ -32,7 +36,8 @@ RUN cmake -S . -B /build \
     -DCMAKE_CXX_COMPILER=g++-14 \
     -DFLATBUFFERS_BUILD_FLATC=ON \
     -DFLATBUFFERS_BUILD_TESTS=OFF \
-    -DEINKLANG_BUILD_CLIENT=OFF
+    -DEINKLANG_BUILD_CLIENT=OFF \
+    -DEINKLANG_VERSION="${EINKLANG_VERSION}"
 
 # Build only the server executable
 RUN cmake --build /build --target EinklangServerApp --parallel

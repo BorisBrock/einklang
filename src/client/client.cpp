@@ -2,7 +2,6 @@
 #include <print>
 #include <string_view>
 #include <enet.h>
-#include "../common/Version.h"
 #include "Networking/EnetClient.h"
 #include "Networking/ServerStatusPoller.h"
 #include "GUI/WebUI.h"

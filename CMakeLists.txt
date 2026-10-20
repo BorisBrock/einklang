@@ -1,7 +1,38 @@
 cmake_minimum_required(VERSION 3.25)
 
+# ---------------------------------------------------------------------------
+# Version
+# ---------------------------------------------------------------------------
+# The git tag (vX.Y.Z) is the single source of truth. Release builds pass it
+# explicitly (-DEINKLANG_VERSION=1.2.3); otherwise it is derived from
+# `git describe`, falling back to 0.0.0-dev without git metadata.
+set(EINKLANG_VERSION "" CACHE STRING "Version compiled into the binaries (default: from git tag)")
+if(NOT EINKLANG_VERSION)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags --match "v[0-9]*" --dirty
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT_VARIABLE _git_version
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    if(_git_version MATCHES "^v(.+)$")
+        set(EINKLANG_VERSION_RESOLVED "${CMAKE_MATCH_1}")
+    else()
+        set(EINKLANG_VERSION_RESOLVED "0.0.0-dev")
+    endif()
+else()
+    string(REGEX REPLACE "^v" "" EINKLANG_VERSION_RESOLVED "${EINKLANG_VERSION}")
+endif()
+
+if(NOT EINKLANG_VERSION_RESOLVED MATCHES "^([0-9]+\\.[0-9]+\\.[0-9]+)")
+    message(FATAL_ERROR "EINKLANG_VERSION '${EINKLANG_VERSION_RESOLVED}' does not start with MAJOR.MINOR.PATCH")
+endif()
+set(_einklang_numeric_version "${CMAKE_MATCH_1}")
+
 project(Einklang
-    VERSION 0.0.1
+    VERSION ${_einklang_numeric_version}
     DESCRIPTION "Lightweight, self-hosted voice and text chat"
     HOMEPAGE_URL "https://github.com/BorisBrock/einklang"
     LANGUAGES CXX C)
@@ -199,6 +230,12 @@ target_include_directories(sqlite3_lib SYSTEM PUBLIC ${sqlite3_SOURCE_DIR})
 target_compile_definitions(sqlite3_lib PRIVATE SQLITE_OMIT_LOAD_EXTENSION SQLITE_DQS=0)
 target_link_libraries(sqlite3_lib PUBLIC Threads::Threads)
 
+# Version string for our own code, as EINKLANG_VERSION_STRING.
+message(STATUS "Einklang version: ${EINKLANG_VERSION_RESOLVED}")
+add_library(einklang_version INTERFACE)
+target_compile_definitions(einklang_version INTERFACE
+    EINKLANG_VERSION_STRING="${EINKLANG_VERSION_RESOLVED}")
+
 # Common compiler warnings for our own code (not for third-party targets).
 add_library(einklang_warnings INTERFACE)
 if(MSVC)
@@ -292,6 +329,7 @@ endif()
 
 target_link_libraries(EinklangClientApp PRIVATE
     einklang_protocol
+    einklang_version
     einklang_warnings
     saucer::saucer
     saucer::embedded
@@ -330,6 +368,7 @@ add_executable(EinklangServerApp
 
 target_link_libraries(EinklangServerApp PRIVATE
     einklang_protocol
+    einklang_version
     einklang_warnings
     yaml-cpp::yaml-cpp
     sqlite3_lib

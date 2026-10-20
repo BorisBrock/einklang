@@ -1,7 +1,7 @@
 name: Release
 
 # Publishes a release when a version tag (e.g. v1.0.0) is pushed. The tag must
-# point at a commit on main and match EINKLANG_VERSION_STRING in Version.h.
+# point at a commit on main; its version is compiled into every artifact.
 on:
   push:
     tags: ['v*.*.*']
@@ -24,13 +24,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check tag is on main and matches Version.h
+      - name: Check tag format and that it is on main
         id: version
         run: |
           version="${GITHUB_REF_NAME#v}"
-          header_version=$(grep -oP 'EINKLANG_VERSION_STRING\s+"\K[^"]+' src/common/Version.h)
-          if [[ "$version" != "$header_version" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match EINKLANG_VERSION_STRING ($header_version) in src/common/Version.h"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not of the form vMAJOR.MINOR.PATCH[-suffix]"
             exit 1
           fi
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
@@ -66,7 +65,8 @@ jobs:
             -DCMAKE_C_COMPILER=gcc-14 \
             -DCMAKE_CXX_COMPILER=g++-14 \
             -DEINKLANG_BUILD_CLIENT=ON \
-            -DEINKLANG_BUILD_TESTS=ON
+            -DEINKLANG_BUILD_TESTS=ON \
+            -DEINKLANG_VERSION=${{ needs.verify.outputs.version }}
 
       - name: Build
         run: cmake --build build --parallel
@@ -91,7 +91,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build -DEINKLANG_BUILD_CLIENT=ON -DEINKLANG_BUILD_TESTS=ON
+        run: >-
+          cmake -S . -B build -DEINKLANG_BUILD_CLIENT=ON -DEINKLANG_BUILD_TESTS=ON
+          -DEINKLANG_VERSION=${{ needs.verify.outputs.version }}
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -135,24 +137,26 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ vars.DOCKERHUB_USERNAME }}/einklang-server
+          images: borisbrock/einklang
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+          # latest only for plain vX.Y.Z tags, not pre-releases like v1.0.0-rc1
           flavor: |
-            latest=true
+            latest=auto
 
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          build-args: EINKLANG_VERSION=${{ needs.verify.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -173,9 +177,12 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/* \
+          prerelease=()
+          [[ "$VERSION" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" release/* "${prerelease[@]}" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Einklang ${{ needs.verify.outputs.version }}" \
+            --title "Einklang $VERSION" \
             --generate-notes \
             --verify-tag

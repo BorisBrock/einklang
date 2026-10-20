@@ -7,7 +7,7 @@
 #   • EinklangClient_Portable_Linux_<version>.zip
 #   • einklang-server-docker-image_<version>.tar
 #
-# Usage:  ./release.sh
+# Usage:  ./release-linux.sh <version>     (e.g. 1.0.0 — normally the git tag without 'v')
 # =============================================================================
 set -euo pipefail
 
@@ -17,22 +17,19 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$ROOT_DIR/build/Release"
 RELEASE_DIR="$ROOT_DIR/release"
-VERSION_HEADER="$ROOT_DIR/src/common/Version.h"
 
 # ---------------------------------------------------------------------------
-# Step 0 — Read the version number from Version.h
+# Step 0 — Version (compiled into the binaries and the Docker image)
 # ---------------------------------------------------------------------------
-echo "==> Reading version from $VERSION_HEADER"
-
-VERSION=$(grep 'EINKLANG_VERSION_STRING' "$VERSION_HEADER" \
-    | grep -oP '"\K[^"]+')
+VERSION="${1:-}"
+VERSION="${VERSION#v}"
 
 if [[ -z "$VERSION" ]]; then
-    echo "ERROR: Could not parse EINKLANG_VERSION_STRING from $VERSION_HEADER" >&2
+    echo "Usage: $0 <version>" >&2
     exit 1
 fi
 
-echo "    Version: $VERSION"
+echo "==> Version: $VERSION"
 
 # ---------------------------------------------------------------------------
 # Step 1 — Prepare the release output folder
@@ -54,7 +51,8 @@ echo "==> Configuring CMake (Release)"
 
 cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DEINKLANG_BUILD_CLIENT=ON
+    -DEINKLANG_BUILD_CLIENT=ON \
+    -DEINKLANG_VERSION="$VERSION"
 
 echo ""
 echo "==> Building EinklangServerApp"
@@ -107,7 +105,7 @@ DOCKER_TAR="einklang-server-docker-image_${VERSION}.tar"
 echo ""
 echo "==> Building Docker image ($DOCKER_IMAGE)"
 
-docker build -t "$DOCKER_IMAGE" "$ROOT_DIR"
+docker build --build-arg EINKLANG_VERSION="$VERSION" -t "$DOCKER_IMAGE" "$ROOT_DIR"
 
 echo ""
 echo "==> Saving Docker image → $DOCKER_TAR"

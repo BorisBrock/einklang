@@ -9,7 +9,6 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "../../common/ServerQuery.h"
-#include "../../common/Version.h"
 #include "../../common/VoicePacket.h"
 #include "protocol_generated.h"
 #include "PeerSessionData.h"

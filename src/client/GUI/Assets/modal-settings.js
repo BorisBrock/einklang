@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputSelect  = document.getElementById("audio-input-select");
   const outputSelect = document.getElementById("audio-output-select");
   const deviceWarnEl = document.getElementById("audio-device-warning");
+  const versionEl    = document.getElementById("settings-app-version");
   const navItems     = dialog ? dialog.querySelectorAll(".settings-nav-item") : [];
   const panels       = dialog ? dialog.querySelectorAll(".settings-panel") : [];
 
@@ -211,6 +212,11 @@ document.addEventListener("DOMContentLoaded", () => {
           savedUserName = await window.saucer.exposed.get_user_name();
       } catch { /* keep previous value */ }
       userNameEl.value = savedUserName;
+
+      try {
+        if (versionEl && !versionEl.textContent && window.saucer?.exposed?.get_app_version)
+          versionEl.textContent = "Einklang v" + await window.saucer.exposed.get_app_version();
+      } catch { /* leave the label empty */ }
       userNameEl.removeAttribute("aria-invalid");
       okBtn.disabled = false;
 

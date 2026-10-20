@@ -115,13 +115,15 @@ that playback stays gap-free.
 ### CI and releases
 
 - **CI** (`.github/workflows/ci.yml`) builds everything and runs the tests on Linux and Windows for every pull request and push to `main`, and checks that the Docker image builds.
-- **Release** (`.github/workflows/release.yml`) runs when a version tag is pushed. Bump `EINKLANG_VERSION_*` in `src/common/Version.h` on `main` first; the tag must match it:
+- **Release** (`.github/workflows/release.yml`) runs when a version tag is pushed. The tag is the single source of truth for the version — there is no version file to bump:
 
   ```bash
   git tag v1.0.0 && git push origin v1.0.0
   ```
 
-  It publishes a GitHub release with `Einklang-<version>-x86_64.AppImage` (Linux client), `EinklangClient_Portable_Windows_<version>.zip` and `EinklangServer_Portable_Windows_<version>.zip`, and pushes `<user>/einklang-server:<version>` (plus `latest`) to Docker Hub. It needs the repository variable `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN`.
+  It publishes a GitHub release with `Einklang-<version>-x86_64.AppImage` (Linux client), `EinklangClient_Portable_Windows_<version>.zip` and `EinklangServer_Portable_Windows_<version>.zip`, and pushes `borisbrock/einklang:<version>` (plus `<major>.<minor>`, `<major>` and `latest`) to Docker Hub. Tags with a suffix (e.g. `v1.1.0-rc1`) become pre-releases and don't move `latest`. It needs the secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+
+The version is set at configure time: `-DEINKLANG_VERSION=1.2.3` (what the release workflow and the `release-*` scripts pass), otherwise `git describe` (e.g. `1.0.0-3-gabc1234`), or `0.0.0-dev` without git metadata. Docker builds take it as `--build-arg EINKLANG_VERSION=1.2.3`. The client shows it in the window title and the Settings dialog; the server prints it on startup and reports it in status queries.
 
 The AppImage keeps its configuration in `~/.config/einklang/client-config.yml` (the bundle itself is read-only); `EINKLANG_CLIENT_CONFIG` overrides the config path for any build. Running `packaging/linux/build-appimage.sh <build-dir> <version>` builds the AppImage locally.
 
