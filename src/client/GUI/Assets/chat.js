@@ -37,7 +37,7 @@ function _colorForUser(username) {
 function _updateSendBtn() {
   const input = document.getElementById("chat-msg");
   const btn   = document.getElementById("chat-send-btn");
-  if (input && btn) btn.disabled = input.value.trim().length === 0;
+  if (input && btn) btn.disabled = input.disabled || input.value.trim().length === 0;
 }
 
 // Send message on Enter key; wire up input-driven button state

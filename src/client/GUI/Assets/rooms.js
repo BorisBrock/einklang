@@ -354,10 +354,34 @@ function setRoomUsers(users) {
 }
 
 // ---------------------------------------------------------------------------
+// Lost connection (called by C++ while re-entering the active room)
+// ---------------------------------------------------------------------------
+
+function setReconnecting(reconnecting) {
+  const banner = document.getElementById("reconnect-banner");
+  if (banner) banner.style.display = reconnecting ? "" : "none";
+
+  // Sending is impossible while disconnected
+  for (const id of ["chat-msg", "chat-attach-btn"]) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = reconnecting;
+  }
+  _updateSendBtn();
+
+  // The user list is stale until the room is re-entered
+  if (reconnecting) {
+    const usersList = document.getElementById("users-list");
+    if (usersList) usersList.innerHTML = "";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Active-room reset (called by C++ when the currently active room is removed)
 // ---------------------------------------------------------------------------
 
 function clearActiveRoom() {
+  setReconnecting(false);
+
   // Remove active highlighting from all room items
   document.querySelectorAll(".room-item.active").forEach((el) => {
     el.classList.remove("active");

@@ -247,6 +247,7 @@ add_executable(EinklangClientApp WIN32
     src/client/Networking/ServerStatusPoller.cpp
     src/client/Connectors/ChatConnector.cpp
     src/client/Connectors/ConnectionConnector.cpp
+    src/client/Connectors/ReconnectConnector.cpp
     src/client/Connectors/RoomEntryConnector.cpp
     src/client/Connectors/ServerStatusConnector.cpp
     src/client/Connectors/VoiceConnector.cpp
@@ -315,6 +316,7 @@ add_executable(EinklangServerApp
     src/server/Networking/EnetServer.cpp
     src/server/Networking/ClientPacketHandler.cpp
     src/server/Networking/ServerPacketFactory.cpp
+    src/server/Networking/StatusProbe.cpp
     src/server/Configuration/ConfigManager.cpp
     src/server/Rooms/ChatDatabase.cpp
     src/server/Rooms/ChatRoom.cpp

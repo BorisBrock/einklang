@@ -9,6 +9,7 @@
 #include "Configuration/ConfigManager.h"
 #include "Connectors/ChatConnector.h"
 #include "Connectors/ConnectionConnector.h"
+#include "Connectors/ReconnectConnector.h"
 #include "Connectors/RoomEntryConnector.h"
 #include "Connectors/ServerStatusConnector.h"
 #include "Connectors/VoiceConnector.h"
@@ -72,6 +73,7 @@ int main(int argc, char* argv[])
     ChatConnector::Connect(viewModel, enetClient);
     ConnectionConnector::Connect(viewModel, enetClient, configManager);
     RoomEntryConnector::Connect(enetClient, viewModel, configManager);
+    ReconnectConnector::Connect(viewModel, enetClient);
     VoiceConnector::Connect(viewModel, enetClient, voicePipeline, voiceEnabled);
     ServerStatusConnector::Connect(viewModel, statusPoller);
 

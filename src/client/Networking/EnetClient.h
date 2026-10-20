@@ -31,6 +31,12 @@ public:
 
   ServerPacketHandler& PacketHandler();
 
+  // Fired on the event-loop thread when the server connection drops
+  // unexpectedly (server shutdown, timeout). Not fired by Disconnect().
+  // Handlers must not call Connect()/Disconnect() synchronously — the
+  // event-loop thread is joined by Disconnect().
+  Event<> onConnectionLost;
+
 private:
   void StartAsyncEventLoop();
   void StopAsyncEventLoop();

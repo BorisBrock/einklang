@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -35,8 +36,20 @@ public:
   // Add a single room (deduplicates); fires onRoomAdded if the room is new
   void AddKnownRoom(const ClientConfig::KnownRoom& room);
 
-  // Push a room-entry result toward the GUI; fires onRoomEntryResult
+  // Push a room-entry result toward the GUI; fires onRoomEntryResult.
+  // While reconnecting, failures are not shown to the user but reported
+  // through onReconnectAttemptFailed instead.
   void NotifyRoomEntryResponse(bool success, const std::string& errorMessage);
+
+  // Called when the server connection drops. If a room is active, enters the
+  // reconnecting state (fires onReconnectingChanged) and returns true.
+  bool BeginReconnect();
+
+  // Re-enters the active room with the last used user name (fires onSwitchToRoom).
+  // Does nothing unless reconnecting.
+  void ReconnectToActiveRoom();
+
+  bool IsReconnecting() const { return mReconnecting; }
 
   // Mark a room as the currently active room; fires onActiveRoomChanged
   void SetActiveRoom(const std::string& address, uint16_t port, const std::string& roomName);
@@ -136,6 +149,9 @@ public:
   // Fired when the active room is removed so the connector can disconnect.
   Event<>                                                  onActiveRoomLeft;
 
+  // Fired when a reconnect attempt fails. Args: error message
+  Event<std::string>                                       onReconnectAttemptFailed;
+
   // Fired when the user clicks the microphone mute/unmute button.
   // Args: muted (true = mic off)
   Event<bool>                                              onVoiceMuteToggled;
@@ -151,6 +167,14 @@ public:
 
   Event<ClientConfig::KnownRoom> onRoomAdded;
   Event<bool, std::string> onRoomEntryResult;
+
+  // Fired when the connection to the active room is lost (true) and when it
+  // is re-established or the reconnect is abandoned (false).
+  Event<bool>                                              onReconnectingChanged;
+
+  // Fired when the user abandons a reconnect by joining another room; the
+  // GUI resets to the idle state.
+  Event<>                                                  onReconnectCancelled;
 
   // Fired when the active room changes. Args: address, port, roomName
   Event<std::string, uint16_t, std::string>                onActiveRoomChanged;
@@ -180,6 +204,12 @@ public:
   Event<> onReady;
 
 private:
+  // Leaves the reconnecting state; returns true if it was reconnecting.
+  bool EndReconnect();
+
+  // Abandons a reconnect because the user chose to join another room.
+  void CancelReconnectForUserAction();
+
   static std::string BuildRoomsJson(const std::vector<ClientConfig::KnownRoom>& rooms);
 
   std::vector<ClientConfig::KnownRoom> mKnownRooms;
@@ -191,6 +221,9 @@ private:
   std::string mActiveAddress;
   uint16_t    mActivePort{0};
   std::string mActiveRoom;
+
+  // True while trying to re-enter the active room after a lost connection.
+  std::atomic<bool> mReconnecting{false};
 
   // Latest status per server; written from the status polling thread.
   mutable std::mutex mServerStatusMutex;

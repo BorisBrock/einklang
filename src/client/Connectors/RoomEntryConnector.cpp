@@ -20,7 +20,7 @@ void RoomEntryConnector::Connect(EnetClient& enetClient, WebViewModel& viewModel
     std::string room;
     std::string userName;
     std::string password;
-    uint16_t    port{49152};
+    uint16_t    port{24816};
   };
   auto pending = std::make_shared<PendingConnection>();
 

@@ -37,6 +37,7 @@
         <div id="chat-content" style="display: none;">
           <div class="chat-header">
             <h4 id="chat-title">Chat</h4>
+            <p id="reconnect-banner" class="reconnect-banner" style="display: none;">Connection lost — reconnecting…</p>
           </div>
           <div id="chat-history" class="chat-messages"></div>
           <div class="chat-input-row">
@@ -82,7 +83,7 @@
           </div>
           <div class="dlg-col dlg-col--narrow">
             <label for="dlg-port">Port</label>
-            <input type="number" id="dlg-port" placeholder="49152" min="1" max="65535" value="49152" autocomplete="off" />
+            <input type="number" id="dlg-port" placeholder="24816" min="1" max="65535" value="24816" autocomplete="off" />
           </div>
         </div>
 
@@ -124,7 +125,7 @@
           </div>
           <div class="dlg-col dlg-col--narrow">
             <label for="edit-server-port">Port</label>
-            <input type="number" id="edit-server-port" placeholder="49152" min="1" max="65535" autocomplete="off" />
+            <input type="number" id="edit-server-port" placeholder="24816" min="1" max="65535" autocomplete="off" />
           </div>
         </div>
 

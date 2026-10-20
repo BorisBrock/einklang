@@ -27,7 +27,54 @@ void WebViewModel::AddKnownRoom(const ClientConfig::KnownRoom& room)
 
 void WebViewModel::NotifyRoomEntryResponse(bool success, const std::string& errorMessage)
 {
+  if (mReconnecting)
+  {
+    if (!success)
+    {
+      onReconnectAttemptFailed.emit(errorMessage);
+      return;
+    }
+    EndReconnect();
+  }
+
   onRoomEntryResult.emit(success, errorMessage);
+}
+
+bool WebViewModel::BeginReconnect()
+{
+  if (mActiveAddress.empty() || mReconnecting.exchange(true))
+    return false;
+
+  onReconnectingChanged.emit(true);
+  return true;
+}
+
+void WebViewModel::ReconnectToActiveRoom()
+{
+  if (!mReconnecting || mActiveAddress.empty())
+    return;
+
+  onSwitchToRoom.emit(mActiveAddress, mActivePort, mActiveRoom, mLocalUserName);
+}
+
+bool WebViewModel::EndReconnect()
+{
+  if (!mReconnecting.exchange(false))
+    return false;
+
+  onReconnectingChanged.emit(false);
+  return true;
+}
+
+void WebViewModel::CancelReconnectForUserAction()
+{
+  if (!EndReconnect())
+    return;
+
+  mActiveAddress.clear();
+  mActivePort = 0;
+  mActiveRoom.clear();
+  onReconnectCancelled.emit();
 }
 
 std::string WebViewModel::GetKnownRoomsJson() const
@@ -48,6 +95,7 @@ void WebViewModel::HandleChatImage(std::vector<std::uint8_t> imageData)
 void WebViewModel::HandleConnectToServer(std::string server, uint16_t port, std::string room,
                                          std::string password, std::string username)
 {
+  CancelReconnectForUserAction();
   mLocalUserName = username;
   onConnectToServer.emit(std::move(server), port, std::move(room),
                          std::move(password), std::move(username));
@@ -76,6 +124,7 @@ float WebViewModel::GetInputRms() const
 void WebViewModel::HandleSwitchToRoom(std::string address, uint16_t port,
                                       std::string roomName, std::string userName)
 {
+  CancelReconnectForUserAction();
   mLocalUserName = userName;
   onSwitchToRoom.emit(std::move(address), port, std::move(roomName), std::move(userName));
 }
@@ -94,6 +143,7 @@ void WebViewModel::HandleRemoveRoom(std::string address, uint16_t port, std::str
 
   if (wasActive)
   {
+    EndReconnect();
     mActiveAddress.clear();
     mActivePort = 0;
     mActiveRoom.clear();
@@ -113,6 +163,7 @@ void WebViewModel::HandleRemoveServer(std::string address, uint16_t port)
 
   if (activeWasHere)
   {
+    EndReconnect();
     mActiveAddress.clear();
     mActivePort = 0;
     mActiveRoom.clear();
@@ -135,6 +186,7 @@ std::string WebViewModel::HandleEditServer(const std::string& oldAddress, uint16
   // join uses the edited ones.
   if (changed && activeWasHere)
   {
+    EndReconnect();
     mActiveAddress.clear();
     mActivePort = 0;
     mActiveRoom.clear();

@@ -80,7 +80,7 @@ RUN chmod +x ./docker-entrypoint.sh
 RUN mkdir -p /data
 
 # ENet default port (UDP) — mirrors the default in server-config.yml
-EXPOSE 49152/udp
+EXPOSE 24816/udp
 
 # Both server-config.yml and einklang.db are resolved relative to the working
 # directory at runtime.  Setting WORKDIR to /data means mounting a single
@@ -91,5 +91,10 @@ VOLUME ["/data"]
 
 # Trap SIGTERM gracefully (already handled in server.cpp via signalHandler)
 STOPSIGNAL SIGTERM
+
+# Healthy only if the server actually answers a status query on its UDP port
+# (the port is read from /data/server-config.yml).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["/app/EinklangServerApp", "--healthcheck"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

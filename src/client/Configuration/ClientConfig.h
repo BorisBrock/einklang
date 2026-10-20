@@ -9,7 +9,7 @@ struct ClientConfig
       std::string lastUsedUserName{"User"};
       std::string lastUsedServerAddress{"localhost"};
       std::string lastUsedRoomName{"Test Room"};
-      uint16_t lastUsedServerPort{49152};
+      uint16_t lastUsedServerPort{24816};
 
       struct KnownRoom
       {

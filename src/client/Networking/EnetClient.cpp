@@ -8,6 +8,9 @@
 
 bool EnetClient::Connect(const std::string& host, uint16_t port)
 {
+  // Release any previous (possibly lost) connection first
+  Disconnect();
+
   if (enet_initialize() != 0)
   {
     std::println("An error occurred while initializing ENet.");
@@ -37,6 +40,9 @@ bool EnetClient::Connect(const std::string& host, uint16_t port)
   if (mPeer == nullptr)
   {
     std::println("No available peers for initiating an ENet connection.");
+    enet_host_destroy(mClient);
+    enet_deinitialize();
+    mClient = nullptr;
     return false;
   }
   /* Wait up to 1 second for the connection attempt to succeed. */
@@ -113,41 +119,45 @@ void EnetClient::FlushOutboundQueue()
 
 void EnetClient::Disconnect()
 {
-  if (!mIsConnected)
+  // mClient stays alive after a lost connection until Disconnect() cleans it up.
+  if (mClient == nullptr)
     return;
 
   StopAsyncEventLoop();
 
-  ENetEvent event = {};
+  bool disconnected = false;
 
-  // Disconnect
-  enet_peer_disconnect(mPeer, 0);
-
-  uint8_t disconnected = false;
-  /* Allow up to 500ms for the disconnect to succeed
-   * and drop any packets received packets.
-   */
-  while (enet_host_service(mClient, &event, 500) > 0)
+  if (mIsConnected)
   {
-    switch (event.type)
+    ENetEvent event = {};
+
+    enet_peer_disconnect(mPeer, 0);
+
+    /* Allow up to 500ms for the disconnect to succeed
+     * and drop any packets received packets.
+     */
+    while (enet_host_service(mClient, &event, 500) > 0)
     {
-    case ENET_EVENT_TYPE_NONE:
-      break;
-    case ENET_EVENT_TYPE_CONNECT:
-      break;
-    case ENET_EVENT_TYPE_RECEIVE:
-      enet_packet_destroy(event.packet);
-      break;
-    case ENET_EVENT_TYPE_DISCONNECT:
-      std::println("Disconnection succeeded.");
-      disconnected = true;
-      break;
-    case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-      break;
+      switch (event.type)
+      {
+      case ENET_EVENT_TYPE_NONE:
+        break;
+      case ENET_EVENT_TYPE_CONNECT:
+        break;
+      case ENET_EVENT_TYPE_RECEIVE:
+        enet_packet_destroy(event.packet);
+        break;
+      case ENET_EVENT_TYPE_DISCONNECT:
+        std::println("Disconnection succeeded.");
+        disconnected = true;
+        break;
+      case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+        break;
+      }
     }
   }
 
-  // Drop connection, since disconnection didn't successed
+  // Drop connection, since disconnection didn't succeed (or the peer is already gone)
   if (!disconnected)
   {
     enet_peer_reset(mPeer);
@@ -156,6 +166,8 @@ void EnetClient::Disconnect()
   enet_host_destroy(mClient);
   enet_deinitialize();
 
+  mClient = nullptr;
+  mPeer   = nullptr;
   mIsConnected = false;
   mConnectedHost.clear();
   mConnectedPort = 0;
@@ -204,13 +216,14 @@ void EnetClient::StartAsyncEventLoop()
         break;
 
       case ENET_EVENT_TYPE_DISCONNECT:
-        std::println("{} disconnected.", event.peer->data);
-        event.peer->data = NULL;
-        break;
-
       case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-        std::println("{} disconnected due to timeout.", event.peer->data);
+        std::println("Connection to {}:{} lost{}.", mConnectedHost, mConnectedPort,
+                     event.type == ENET_EVENT_TYPE_DISCONNECT_TIMEOUT ? " (timeout)" : "");
         event.peer->data = NULL;
+        // Stop servicing the dead host; Disconnect() releases it later.
+        mIsConnected          = false;
+        mKeepEventLoopRunning = false;
+        onConnectionLost.emit();
         break;
 
       case ENET_EVENT_TYPE_CONNECT:
@@ -236,5 +249,6 @@ ServerPacketHandler& EnetClient::PacketHandler()
 void EnetClient::StopAsyncEventLoop()
 {
   mKeepEventLoopRunning = false;
-  mEventLoopThread.join();
+  if (mEventLoopThread.joinable())
+    mEventLoopThread.join();
 }

@@ -11,7 +11,8 @@
 class EnetServer
 {
 public:
-  bool Start(uint16_t port);
+  // maxConnections is clamped to what ENet supports.
+  bool Start(uint16_t port, std::size_t maxConnections);
   bool Stop();
 
   void ProcessEvents();

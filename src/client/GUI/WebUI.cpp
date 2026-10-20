@@ -174,6 +174,19 @@ int WebUI::Run()
       mExecuteJs("setServerStatus(" + WebViewModel::BuildServerStatusJson(address, port, status) + ")");
     });
 
+    mViewModel.onReconnectingChanged.subscribe([this](bool reconnecting)
+    {
+      if (!mExecuteJs) return;
+      mExecuteJs(std::format("setReconnecting({})", reconnecting ? "true" : "false"));
+    });
+
+    // The user gave up on a lost room by joining another one — reset the GUI.
+    mViewModel.onReconnectCancelled.subscribe([this]()
+    {
+      if (!mExecuteJs) return;
+      mExecuteJs("clearActiveRoom()");
+    });
+
     // When the active room is removed, tell the GUI to reset to the idle state.
     mViewModel.onActiveRoomLeft.subscribe([this]()
     {

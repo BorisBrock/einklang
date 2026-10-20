@@ -21,6 +21,8 @@ bool ConfigManager::Load()
 
     if (node["port"])
       mConfig.port = node["port"].as<uint16_t>();
+    if (node["maxConnections"])
+      mConfig.maxConnections = node["maxConnections"].as<uint32_t>();
 
     if (node["maxHistoryMessages"])
       mConfig.maxHistoryMessages = node["maxHistoryMessages"].as<uint32_t>();

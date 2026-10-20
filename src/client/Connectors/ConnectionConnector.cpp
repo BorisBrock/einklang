@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <mutex>
 #include <print>
 #include <thread>
 #include "../Configuration/ConfigManager.h"
@@ -7,11 +8,16 @@
 #include "../Networking/EnetClient.h"
 #include "ConnectionConnector.h"
 
+// Serialises connect/disconnect work, which runs on detached threads.
+static std::mutex sConnectionMutex;
+
 static void ConnectAndEnterRoom(WebViewModel& viewModel, EnetClient& enetClient,
                                 const std::string& server, uint16_t port,
                                 const std::string& room, const std::string& password,
                                 const std::string& username)
 {
+  std::lock_guard lock(sConnectionMutex);
+
   // Only reconnect if we're not already connected to this server
   if (!enetClient.IsConnectedTo(server, port))
   {
@@ -72,6 +78,10 @@ void ConnectionConnector::Connect(WebViewModel& viewModel, EnetClient& enetClien
   viewModel.onActiveRoomLeft.subscribe([&enetClient]()
   {
     std::println("Active room removed — disconnecting from server.");
-    std::thread([&enetClient]() { enetClient.Disconnect(); }).detach();
+    std::thread([&enetClient]()
+    {
+      std::lock_guard lock(sConnectionMutex);
+      enetClient.Disconnect();
+    }).detach();
   });
 }

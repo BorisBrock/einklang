@@ -1,4 +1,7 @@
-port: 49152
+port: 24816
+# Optional cap on simultaneous connections. Defaults to the sum of all rooms'
+# maxUsers plus some headroom when omitted.
+# maxConnections: 64
 maxHistoryMessages: 500
 maxMessageLength: 2048
 maxUserNameLength: 64

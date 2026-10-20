@@ -6,7 +6,12 @@
 
 struct ServerConfig
 {
-  uint16_t port{49152};
+  uint16_t port{24816};
+
+  // Maximum number of simultaneous client connections. 0 = automatic:
+  // the sum of all rooms' maxUsers plus some headroom for clients that are
+  // connected but not (yet) in a room.
+  uint32_t maxConnections{0};
 
   // Maximum number of messages kept in memory per room (oldest are evicted)
   uint32_t maxHistoryMessages{500};

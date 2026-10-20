@@ -1,11 +1,23 @@
 services:
   einklang-server:
+    # Built from the Dockerfile in this directory: `docker compose up -d --build`
+    build: .
     image: einklang-server:latest
     container_name: einklang-server
 
-    ports:
-      # ENet UDP — must match the port in server-config.yml
-      - "49152:49152/udp"
+    # Host networking: the server binds its UDP port directly on the host.
+    # This avoids Docker's NAT/userland proxy for voice traffic, keeps real
+    # client addresses visible to the server, and works for IPv6 without any
+    # extra Docker configuration. Requires a Linux Docker host.
+    #
+    # Only one port needs to be forwarded in your router: the UDP `port` from
+    # server-config.yml (default 24816).
+    network_mode: host
+
+    # Alternative for hosts where host networking is unavailable
+    # (Docker Desktop): remove `network_mode` above and publish the port.
+    # ports:
+    #   - "24816:24816/udp"   # must match `port` in server-config.yml
 
     volumes:
       # Mount a local directory to /data so that both server-config.yml and
@@ -20,12 +32,7 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 10s
 
-    healthcheck:
-      # The server has no HTTP endpoint; we just check that the process is alive.
-      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    # Health is checked by the image's HEALTHCHECK, which sends a real status
+    # query to the server (`EinklangServerApp --healthcheck`).
 
 # No named volumes needed — everything lives in the bind-mounted /volume1/docker/einklang/data folder.

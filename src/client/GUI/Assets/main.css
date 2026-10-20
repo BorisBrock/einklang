@@ -407,6 +407,12 @@ dialog article footer button {
   margin: 0;
 }
 
+.reconnect-banner {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--del-color);
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <print>
 #include <vector>
@@ -19,7 +20,7 @@ constexpr enet_uint32 kStatusReplyIntervalMs = 100;
 constexpr std::size_t kMaxRateLimitEntries = 4096;
 }
 
-bool EnetServer::Start(uint16_t port)
+bool EnetServer::Start(uint16_t port, std::size_t maxConnections)
 {
   if (enet_initialize() != 0)
   {
@@ -31,7 +32,10 @@ bool EnetServer::Start(uint16_t port)
   address.host = ENET_HOST_ANY;
   address.port = port;
 
-  mServer = enet_host_create(&address, 32, 3 /* channels: 0 = reliable chat, 1 = reserved, 2 = unreliable voice */, 0, 0);
+  maxConnections = std::clamp<std::size_t>(maxConnections, 1, ENET_PROTOCOL_MAXIMUM_PEER_ID);
+  std::println("Accepting up to {} simultaneous connection(s).", maxConnections);
+
+  mServer = enet_host_create(&address, maxConnections, 3 /* channels: 0 = reliable chat, 1 = reserved, 2 = unreliable voice */, 0, 0);
   if (mServer == NULL)
   {
     std::println("An error occurred while trying to create an ENet server host.");
@@ -48,6 +52,15 @@ bool EnetServer::Stop()
 {
   if (mServer)
   {
+    // Tell connected clients right away so they start reconnecting instead
+    // of waiting for a timeout.
+    for (ENetPeer* peer = mServer->peers; peer < mServer->peers + mServer->peerCount; ++peer)
+    {
+      if (peer->state == ENET_PEER_STATE_CONNECTED)
+        enet_peer_disconnect_now(peer, 0);
+    }
+    enet_host_flush(mServer);
+
     enet_host_destroy(mServer);
     mServer = nullptr;
   }

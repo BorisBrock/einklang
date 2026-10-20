@@ -6,10 +6,12 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <stdint.h>
 #include "../common/Version.h"
 #include "Networking/EnetServer.h"
 #include "Networking/ServerPacketFactory.h"
+#include "Networking/StatusProbe.h"
 #include "Configuration/ConfigManager.h"
 #include "Rooms/ChatRoomManager.h"
 #include "Connectors/LoginConnector.h"
@@ -39,10 +41,51 @@ std::filesystem::path ResolveDataDir()
 
   return std::filesystem::current_path();
 }
+
+// Connections that may exist on top of the room capacity: clients that are
+// connected but not in a room yet, or whose previous connection has not
+// timed out yet.
+constexpr std::size_t kConnectionHeadroom = 16;
+
+std::size_t ResolveMaxConnections(const ServerConfig& config)
+{
+  if (config.maxConnections > 0)
+    return config.maxConnections;
+
+  std::size_t capacity = 0;
+  for (const auto& room : config.rooms)
+    capacity += room.maxUsers;
+  return capacity + kConnectionHeadroom;
+}
 }
 
-int main()
+// `--healthcheck`: exit 0 if the server configured in the data directory
+// answers a status query on localhost, 1 otherwise (Docker HEALTHCHECK).
+int RunHealthcheck()
 {
+  ConfigManager configManager((ResolveDataDir() / "server-config.yml").string());
+  if (!configManager.Load())
+    return EXIT_FAILURE;
+
+  const auto port = configManager.Get().port;
+  if (!StatusProbe::ProbeLocalServer(port, 3000))
+  {
+    std::println("Unhealthy: no status reply on UDP port {}.", port);
+    return EXIT_FAILURE;
+  }
+
+  std::println("Healthy: server answers on UDP port {}.", port);
+  return EXIT_SUCCESS;
+}
+
+int main(int argc, char* argv[])
+{
+  for (int i = 1; i < argc; ++i)
+  {
+    if (std::string_view(argv[i]) == "--healthcheck")
+      return RunHealthcheck();
+  }
+
   // Disable stdout buffering so log lines appear immediately in container runtimes
   // (e.g. Portainer/Docker) that don't allocate a TTY.
   std::setvbuf(stdout, nullptr, _IONBF, 0);
@@ -97,7 +140,7 @@ int main()
   {
     return ServerPacketFactory::BuildServerStatus(chatRoomManager.Rooms());
   });
-  if (!server.Start(config.port))
+  if (!server.Start(config.port, ResolveMaxConnections(config)))
   {
     std::println("Failed to start server.");
     return EXIT_FAILURE;
