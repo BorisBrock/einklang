@@ -153,6 +153,8 @@ jobs:
             latest=auto
 
       - uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           push: true
@@ -169,8 +171,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the packages: other artifacts in the run (e.g. Docker build
+      # records) are not plain zips and fail to download.
       - uses: actions/download-artifact@v4
         with:
+          pattern: "{linux,windows}"
           path: release
           merge-multiple: true
 
