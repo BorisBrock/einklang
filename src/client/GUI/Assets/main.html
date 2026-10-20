@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="pico.min.css" />
     <link rel="stylesheet" href="main.css" />
+    <!-- Loaded in <head> so the saved theme is applied before first paint -->
+    <script type="text/javascript" src="theme.js"></script>
   </head>
   <body>
     <script type="text/javascript" src="splitter.js"></script>
@@ -33,7 +35,11 @@
 
       <!-- Center flexible column -->
       <div class="col-center" id="col-center">
-        <p id="chat-placeholder" class="chat-placeholder">You are currently not in a chat room.</p>
+        <div id="chat-placeholder" class="chat-placeholder">
+          <div class="chat-placeholder-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <h4>You are not in a chat room</h4>
+          <p>Pick a room on the left, or add one with the + button.</p>
+        </div>
         <div id="chat-content" style="display: none;">
           <div class="chat-header">
             <h4 id="chat-title">Chat</h4>
@@ -73,7 +79,7 @@
       <article>
         <h3>Connect to a Chat Room</h3>
 
-        <p id="connect-error" style="color: var(--del-color); display: none;"></p>
+        <p id="connect-error" class="dialog-error" style="display: none;"></p>
 
         <!-- Row 1: Server address + Port -->
         <div class="dlg-row">
@@ -115,7 +121,7 @@
       <article>
         <h3>Edit Server</h3>
 
-        <p id="edit-server-error" style="color: var(--del-color); display: none;"></p>
+        <p id="edit-server-error" class="dialog-error" style="display: none;"></p>
 
         <!-- Row 1: Server address + Port -->
         <div class="dlg-row">
@@ -143,35 +149,77 @@
     <!-- Settings Dialog -->
     <dialog id="settings-dialog">
       <article>
-        <h3>Settings</h3>
+        <header class="settings-header">
+          <h3>Settings</h3>
+        </header>
 
-        <fieldset class="settings-group">
-          <legend>Audio</legend>
+        <div class="settings-body">
+          <nav class="settings-nav" aria-label="Settings sections">
+            <button type="button" class="settings-nav-item active" data-section="appearance">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.56-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/></svg>
+              Appearance
+            </button>
+            <button type="button" class="settings-nav-item" data-section="audio">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              Audio
+            </button>
+          </nav>
 
-          <label for="input-gain-slider">Input Gain</label>
-          <div class="settings-slider-row">
-            <input type="range" id="input-gain-slider" min="0" max="200" step="1" />
-            <span id="input-gain-value" class="settings-gain-value">1.00×</span>
+          <div class="settings-panels">
+            <section class="settings-panel" data-section="appearance">
+              <h4 class="settings-section-title">Theme</h4>
+              <p class="settings-section-hint">Previewed instantly, saved when you press Save.</p>
+              <div id="theme-grid" class="theme-grid" role="radiogroup" aria-label="Theme"></div>
+            </section>
+
+            <section class="settings-panel" data-section="audio" hidden>
+              <h4 class="settings-section-title">Microphone</h4>
+              <p class="settings-section-hint">Changes are applied live while the dialog is open.</p>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label for="input-gain-slider">Input gain</label>
+                  <span id="input-gain-value" class="settings-gain-value">1.00×</span>
+                </div>
+                <p class="settings-field-desc">Amplifies your microphone before it is sent.</p>
+                <div class="settings-slider-row">
+                  <input type="range" id="input-gain-slider" min="0" max="200" step="1" />
+                </div>
+              </div>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label for="vad-threshold-slider">Voice activation threshold</label>
+                </div>
+                <p class="settings-field-desc">How loud you need to be before your voice is transmitted.</p>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label">Low</span>
+                  <input type="range" id="vad-threshold-slider" min="0" max="100" step="1" />
+                  <span class="settings-slider-label">High</span>
+                </div>
+              </div>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label>Input level</label>
+                </div>
+                <div class="level-meter-track">
+                  <div id="level-meter-bar" class="level-meter-bar"></div>
+                  <div id="level-meter-threshold" class="level-meter-threshold"></div>
+                </div>
+                <div class="level-meter-legend">
+                  <span><i class="legend-active"></i>Transmitting</span>
+                  <span><i class="legend-inactive"></i>Below threshold</span>
+                  <span><i class="legend-threshold"></i>Threshold</span>
+                </div>
+              </div>
+            </section>
           </div>
-
-          <label for="vad-threshold-slider">Voice Activation Threshold</label>
-          <div class="settings-slider-row">
-            <span class="settings-slider-label">Low</span>
-            <input type="range" id="vad-threshold-slider" min="0" max="100" step="1" />
-            <span class="settings-slider-label settings-slider-label--right">High</span>
-          </div>
-
-          <label class="settings-meter-label">Input Level Preview</label>
-          <p class="settings-meter-caption">Reflects applied gain &amp; threshold marker (red line)</p>
-          <div class="level-meter-track">
-            <div id="level-meter-bar" class="level-meter-bar"></div>
-            <div id="level-meter-threshold" class="level-meter-threshold"></div>
-          </div>
-        </fieldset>
+        </div>
 
         <footer>
           <button class="secondary" id="settings-cancel-btn">Cancel</button>
-          <button id="settings-ok-btn">OK</button>
+          <button id="settings-ok-btn">Save</button>
         </footer>
       </article>
     </dialog>

@@ -25,6 +25,9 @@ struct ClientConfig
       int windowWidth{900};
       int windowHeight{600};
 
+      // GUI color theme id (see THEMES in theme.js), e.g. "dark", "light", "nord"
+      std::string theme{"dark"};
+
       // Voice chat settings
       bool  voiceEnabled{true};       // master toggle for voice chat
       float inputGain{1.0f};          // microphone gain (0.0 – 2.0)

@@ -36,6 +36,9 @@ bool ConfigManager::Load()
     if (node["window-height"])
       mConfig.windowHeight = node["window-height"].as<int>();
 
+    if (node["theme"])
+      mConfig.theme = node["theme"].as<std::string>();
+
     // Voice settings
     if (node["voice-enabled"])
       mConfig.voiceEnabled = node["voice-enabled"].as<bool>();
@@ -95,6 +98,7 @@ bool ConfigManager::Save() const
     root["last-used-server-port"]    = mConfig.lastUsedServerPort;
     root["window-width"]             = mConfig.windowWidth;
     root["window-height"]            = mConfig.windowHeight;
+    root["theme"]                    = mConfig.theme;
     root["voice-enabled"]            = mConfig.voiceEnabled;
     root["input-gain"]               = mConfig.inputGain;
     root["output-volume"]            = mConfig.outputVolume;

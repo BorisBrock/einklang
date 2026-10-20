@@ -7,8 +7,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const vadSlider    = document.getElementById("vad-threshold-slider");
   const meterBar     = document.getElementById("level-meter-bar");
   const meterThresh  = document.getElementById("level-meter-threshold");
+  const themeGrid    = document.getElementById("theme-grid");
+  const navItems     = dialog ? dialog.querySelectorAll(".settings-nav-item") : [];
+  const panels       = dialog ? dialog.querySelectorAll(".settings-panel") : [];
 
   if (!dialog) return;
+
+  // ---------------------------------------------------------------------------
+  // Section navigation
+  // ---------------------------------------------------------------------------
+  function showSection(name) {
+    navItems.forEach(item => item.classList.toggle("active", item.dataset.section === name));
+    panels.forEach(panel => { panel.hidden = panel.dataset.section !== name; });
+  }
+
+  navItems.forEach(item => item.addEventListener("click", () => showSection(item.dataset.section)));
+
+  // ---------------------------------------------------------------------------
+  // Theme picker: one card per theme, each previewing its own palette
+  // ---------------------------------------------------------------------------
+  const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  function markSelectedTheme(id) {
+    themeGrid.querySelectorAll(".theme-card").forEach(card => {
+      card.setAttribute("aria-checked", card.dataset.theme === id ? "true" : "false");
+    });
+  }
+
+  THEMES.forEach(theme => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "theme-card";
+    card.dataset.theme = theme.id;
+    card.setAttribute("role", "radio");
+    card.innerHTML =
+      '<span class="theme-preview" data-palette="' + theme.id + '">' +
+        '<span class="theme-preview-side"><i class="on"></i><i></i><i></i></span>' +
+        '<span class="theme-preview-main"><i class="text"></i><i class="other"></i><i class="own"></i></span>' +
+      '</span>' +
+      '<span class="theme-card-label"><span></span><span class="theme-card-check">' + CHECK_SVG + '</span></span>';
+    card.querySelector(".theme-card-label > span").textContent = theme.name;
+    card.addEventListener("click", () => {
+      applyTheme(theme.id);       // live preview; persisted on Save
+      markSelectedTheme(theme.id);
+    });
+    themeGrid.appendChild(card);
+  });
 
   // ---------------------------------------------------------------------------
   // Scale helpers
@@ -56,8 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const rmsP = rmsToPercent(rms);
         meterBar.style.width      = rmsP + "%";
         meterBar.style.background = (rms >= vad)
-          ? "var(--primary)"            // above threshold: teal
-          : "hsl(205, 22%, 45%)";       // below threshold: dimmed
+          ? "var(--accent)"             // above threshold: transmitting
+          : "var(--text-faint)";        // below threshold: dimmed
       } catch { /* ignore if bridge not yet ready */ }
     }, 80);
   }
@@ -77,14 +121,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------------------------------------------------------------------
   // Saved values (captured on dialog open; restored on cancel)
   // ---------------------------------------------------------------------------
-  let savedVad  = VAD_MIN;
-  let savedGain = 1.0;
+  let savedVad   = VAD_MIN;
+  let savedGain  = 1.0;
+  let savedTheme = getCurrentTheme();
 
   // ---------------------------------------------------------------------------
   // Dialog lifecycle
   // ---------------------------------------------------------------------------
   dialog.addEventListener("toggle", async () => {
     if (dialog.open) {
+      savedTheme = getCurrentTheme();
+      markSelectedTheme(savedTheme);
+
       // Load current settings from the backend and populate sliders.
       try {
         if (window.saucer?.exposed?.get_voice_settings) {
@@ -123,14 +171,25 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------------------------------------------------------------------
   // Cancel: restore original settings and close
   // ---------------------------------------------------------------------------
-  cancelBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  function cancelAndClose() {
     if (window.saucer?.exposed?.apply_voice_settings) {
       window.saucer.exposed.apply_voice_settings(savedVad, savedGain)
         .catch(() => {});
     }
+    applyTheme(savedTheme);
     window.closeModal(dialog);
+  }
+
+  cancelBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    cancelAndClose();
+  });
+
+  // Escape: same as Cancel (instead of the native close, which skips the revert)
+  dialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+    cancelAndClose();
   });
 
   // ---------------------------------------------------------------------------
@@ -143,6 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.saucer.exposed.save_voice_settings(currentVad(), currentGain())
         .catch(() => {});
     }
+    if (getCurrentTheme() !== savedTheme) saveTheme(getCurrentTheme());
     window.closeModal(dialog);
   });
 
@@ -150,16 +210,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Close on click outside the article (treat as cancel)
   // ---------------------------------------------------------------------------
   dialog.addEventListener("click", (e) => {
+    // Clicks on the backdrop target the dialog itself; anything else (incl.
+    // keyboard-activated buttons, which report 0/0 coordinates) is inside.
+    if (e.target !== dialog) return;
     const rect = dialog.querySelector("article").getBoundingClientRect();
     const inside =
       e.clientX >= rect.left && e.clientX <= rect.right &&
       e.clientY >= rect.top  && e.clientY <= rect.bottom;
-    if (!inside) {
-      if (window.saucer?.exposed?.apply_voice_settings) {
-        window.saucer.exposed.apply_voice_settings(savedVad, savedGain)
-          .catch(() => {});
-      }
-      window.closeModal(dialog);
-    }
+    if (!inside) cancelAndClose();
   });
 });

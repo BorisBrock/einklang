@@ -254,6 +254,19 @@ int WebUI::Run()
                                         static_cast<float>(gain));
     });
 
+    webview->expose("get_theme", [this]() -> std::string {
+      return mConfigManager.Get().theme;
+    });
+
+    webview->expose("save_theme", [this](std::string theme) {
+      // Theme ids are short lowercase slugs — reject anything else
+      const bool valid = !theme.empty() && theme.size() <= 32 &&
+        std::ranges::all_of(theme, [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
+      if (!valid) return;
+      mConfigManager.Get().theme = std::move(theme);
+      mConfigManager.Save();
+    });
+
     webview->expose("get_input_rms", [this]() -> double {
       return static_cast<double>(mViewModel.GetInputRms());
     });
