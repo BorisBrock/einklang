@@ -22,8 +22,9 @@ TEST_CASE("a missing file is a first start with default settings")
   CHECK(config.lastUsedServerAddress == "localhost");
   CHECK(config.lastUsedServerPort == 24816);
   CHECK(config.knownRooms.empty());
-  CHECK(config.windowWidth == 900);
-  CHECK(config.windowHeight == 600);
+  CHECK(config.windowWidth == 1280);
+  CHECK(config.windowHeight == 800);
+  CHECK_FALSE(config.windowMaximized);
   CHECK(config.theme == "dark");
   CHECK(config.voiceEnabled);
   CHECK(config.inputGain == doctest::Approx(1.0f));
@@ -46,6 +47,7 @@ last-used-room-name: Lobby
 last-used-server-port: 4000
 window-width: 1280
 window-height: 720
+window-maximized: true
 theme: nord
 voice-enabled: false
 input-gain: 1.5
@@ -80,6 +82,7 @@ known-rooms:
   CHECK(c.lastUsedServerPort == 4000);
   CHECK(c.windowWidth == 1280);
   CHECK(c.windowHeight == 720);
+  CHECK(c.windowMaximized);
   CHECK(c.theme == "nord");
   CHECK_FALSE(c.voiceEnabled);
   CHECK(c.inputGain == doctest::Approx(1.5f));
@@ -111,9 +114,18 @@ TEST_CASE("omitted keys keep their defaults")
   ConfigManager manager(dir.Write("client-config.yml", "theme: light\n"));
   REQUIRE(manager.Load());
   CHECK(manager.Get().theme == "light");
-  CHECK(manager.Get().windowWidth == 900);
+  CHECK(manager.Get().windowWidth == 1280);
   CHECK(manager.Get().vadReleaseFrames == 20);
   CHECK(manager.Get().knownRooms.empty());
+}
+
+TEST_CASE("a degenerate window size falls back to the default")
+{
+  TempDir dir;
+  ConfigManager manager(dir.Write("client-config.yml", "window-width: 0\nwindow-height: 0\n"));
+  REQUIRE(manager.Load());
+  CHECK(manager.Get().windowWidth == 1280);
+  CHECK(manager.Get().windowHeight == 800);
 }
 
 TEST_CASE("the legacy vad-threshold key is still understood")
@@ -187,6 +199,7 @@ TEST_CASE("everything saved loads back unchanged")
   c.lastUsedServerPort = 65535;
   c.windowWidth = 1920;
   c.windowHeight = 1080;
+  c.windowMaximized = true;
   c.theme = "light";
   c.voiceEnabled = false;
   c.inputGain = 1.75f;
@@ -213,6 +226,7 @@ TEST_CASE("everything saved loads back unchanged")
   CHECK(r.lastUsedRoomName == c.lastUsedRoomName);
   CHECK(r.lastUsedServerPort == c.lastUsedServerPort);
   CHECK(r.windowWidth == c.windowWidth);
+  CHECK(r.windowMaximized == c.windowMaximized);
   CHECK(r.windowHeight == c.windowHeight);
   CHECK(r.theme == c.theme);
   CHECK(r.voiceEnabled == c.voiceEnabled);

@@ -47,7 +47,10 @@ int WebUI::Run()
     window->set_title("Einklang " EINKLANG_VERSION_STRING);
     {
       auto& cfg = mConfigManager.Get();
+      window->set_min_size({ClientConfig::kMinWindowWidth, ClientConfig::kMinWindowHeight});
       window->set_size({cfg.windowWidth, cfg.windowHeight});
+      if (cfg.windowMaximized)
+        window->set_maximized(true);
     }
 #ifdef _WIN32
     // Apply the embedded .ico resource (ID 1) to the window title bar and
@@ -67,15 +70,19 @@ int WebUI::Run()
     }
 #endif
 
-    // Track the current window size so we can persist it on close
+    // Track the restored window size so we can persist it on close.  Sizes
+    // reported while minimized (0×0 on Windows) or maximized (the screen size)
+    // are skipped, so un-maximizing after the next start restores this size.
     saucer::size currentSize = window->size();
-    window->on<saucer::window::event::resize>([&currentSize](int w, int h) {
+    window->on<saucer::window::event::resize>([&window, &currentSize](int w, int h) {
+      if (w <= 0 || h <= 0 || window->minimized() || window->maximized()) return;
       currentSize = {w, h};
     });
-    window->on<saucer::window::event::closed>([this, &currentSize]() {
+    window->on<saucer::window::event::closed>([this, &window, &currentSize]() {
       auto& cfg = mConfigManager.Get();
-      cfg.windowWidth  = currentSize.w;
-      cfg.windowHeight = currentSize.h;
+      cfg.windowWidth     = currentSize.w;
+      cfg.windowHeight    = currentSize.h;
+      cfg.windowMaximized = window->maximized();
       mConfigManager.Save();
     });
 

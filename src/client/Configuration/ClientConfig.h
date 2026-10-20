@@ -24,8 +24,12 @@ struct ClientConfig
 
       std::vector<KnownRoom> knownRooms;
 
-      int windowWidth{900};
-      int windowHeight{600};
+      // Size of the restored (non-maximized) window, saved on close
+      static constexpr int kMinWindowWidth{640};
+      static constexpr int kMinWindowHeight{480};
+      int windowWidth{1280};
+      int windowHeight{800};
+      bool windowMaximized{false};
 
       // GUI color theme id (see THEMES in theme.js), e.g. "dark", "light", "nord"
       std::string theme{"dark"};

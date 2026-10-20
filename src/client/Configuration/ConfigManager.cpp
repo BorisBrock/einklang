@@ -55,6 +55,17 @@ bool ConfigManager::Load()
     if (node["window-height"])
       mConfig.windowHeight = node["window-height"].as<int>();
 
+    // A degenerate size (e.g. saved while minimized) falls back to the default
+    if (mConfig.windowWidth < ClientConfig::kMinWindowWidth ||
+        mConfig.windowHeight < ClientConfig::kMinWindowHeight)
+    {
+      mConfig.windowWidth  = ClientConfig{}.windowWidth;
+      mConfig.windowHeight = ClientConfig{}.windowHeight;
+    }
+
+    if (node["window-maximized"])
+      mConfig.windowMaximized = node["window-maximized"].as<bool>();
+
     if (node["theme"])
       mConfig.theme = node["theme"].as<std::string>();
 
@@ -121,6 +132,7 @@ bool ConfigManager::Save() const
     root["last-used-server-port"]    = mConfig.lastUsedServerPort;
     root["window-width"]             = mConfig.windowWidth;
     root["window-height"]            = mConfig.windowHeight;
+    root["window-maximized"]         = mConfig.windowMaximized;
     root["theme"]                    = mConfig.theme;
     root["voice-enabled"]            = mConfig.voiceEnabled;
     root["input-gain"]               = mConfig.inputGain;
