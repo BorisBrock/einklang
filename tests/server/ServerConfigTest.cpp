@@ -33,12 +33,14 @@ TEST_CASE("the shipped server-config.yml loads")
   CHECK(config.maxMessageLength == 2048);
   CHECK(config.maxUserNameLength == 64);
   CHECK(config.voiceEnabled);
-  REQUIRE(config.rooms.size() == 2);
+  REQUIRE(config.rooms.size() == 4);
   CHECK(config.rooms[0].name == "Lobby");
-  CHECK(config.rooms[0].maxUsers == 10);
-  CHECK(config.rooms[0].password == "lobby123");
+  CHECK(config.rooms[0].maxUsers == 20);
+  CHECK(config.rooms[0].password.empty());
   CHECK(config.rooms[1].name == "Game Room 1");
   CHECK(config.rooms[1].maxUsers == 4);
+  CHECK(config.rooms[2].name == "Game Room 2");
+  CHECK(config.rooms[3].name == "Game Room 3");
 }
 
 TEST_CASE("every key is read")

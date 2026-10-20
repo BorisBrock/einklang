@@ -7,11 +7,20 @@ maxMessageLength: 2048
 maxUserNameLength: 64
 voiceEnabled: true
 rooms:
+  # An empty password lets anyone join the room.
   - name: "Lobby"
-    maxUsers: 10
-    password: "lobby123"
+    maxUsers: 20
+    password: ""
     voiceEnabled: true
   - name: "Game Room 1"
     maxUsers: 4
-    password: "game123"
+    password: "game1"
+    voiceEnabled: true
+  - name: "Game Room 2"
+    maxUsers: 4
+    password: "game2"
+    voiceEnabled: true
+  - name: "Game Room 3"
+    maxUsers: 8
+    password: "game3"
     voiceEnabled: true
