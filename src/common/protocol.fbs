@@ -1,0 +1,81 @@
+// IDL file for client/server communication
+
+namespace Einklang;
+
+// ----------------------------------------
+// Client -> Server
+// ----------------------------------------
+
+// User by the client to request entry to a server'.s chat room
+table RoomEntryRequest {
+  room_name:string;
+  room_password:string;
+  user_name:string;
+}
+
+// Publishes a chat message to other users
+table PublishChatMessage {
+  text:string;
+}
+
+// Publishes a chat image to other users (raw bytes, any common image format)
+table PublishChatImage {
+  image_data:[ubyte];
+}
+
+
+// ----------------------------------------
+// Server -> Client
+// ----------------------------------------
+
+// Informs the client that another user has published a chat message
+table HandleNewChatMessage {
+  user:string;
+  text:string;
+}
+
+// Informs the client that another user has published a chat image
+table HandleNewChatImage {
+  user:string;
+  image_data:[ubyte];
+}
+
+// Informs the client if room entry was granted
+table RoomEntryResponse {
+  success:bool;
+  error_message:string;
+}
+
+// Sends the current list of users in a room to a client
+table RoomUsersUpdate {
+  users:[string];
+}
+
+// A single entry in the chat history
+table ChatMessage {
+  user:string;
+  text:string;
+  timestamp_ms:int64;
+  image_data:[ubyte];   // null for text messages; populated for image messages
+}
+
+// Delivers the recent chat history to a client that has just entered a room
+table RoomChatHistory {
+  messages:[ChatMessage];
+}
+
+// ----------------------------------------
+// Voice (binary, NOT FlatBuffers)
+// ----------------------------------------
+//
+// Voice frames bypass FlatBuffers and use a compact binary layout defined
+// in VoicePacket.h.  They are sent unreliably on ENet channel 2.
+//
+// Client → Server  (PacketType 3):
+//   [1B type][4B sequenceNumber][N bytes Opus payload]
+//
+// Server → Client  (PacketType 5):
+//   [1B type][4B senderPeerId][1B senderNameLen][M bytes senderName]
+//            [4B sequenceNumber][N bytes Opus payload]
+//
+// The server relays Opus frames verbatim without decoding.

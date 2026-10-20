@@ -1,0 +1,29 @@
+# Build outputs — never send these to Docker; the builder stage recompiles from source
+build/
+.cache/
+
+# Runtime data directory (server-config.yml + einklang.db live here on the host)
+data/
+
+# IDE and editor artifacts
+.vs/
+.vscode/
+*.user
+*.suo
+*.sdf
+*.opensdf
+
+# CMake local caches that belong to the host system
+CMakeUserPresets.json
+
+# Git metadata
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+
+# CI / GitHub Actions
+.github/

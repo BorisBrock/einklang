@@ -1,0 +1,31 @@
+services:
+  einklang-server:
+    image: einklang-server:latest
+    container_name: einklang-server
+
+    ports:
+      # ENet UDP — must match the port in server-config.yml
+      - "49152:49152/udp"
+
+    volumes:
+      # Mount a local directory to /data so that both server-config.yml and
+      # einklang.db are visible on the host.  On first start the entrypoint
+      # script seeds a default server-config.yml if none exists yet.
+      - /volume1/docker/einklang/data:/data
+
+    # Restart automatically unless deliberately stopped
+    restart: unless-stopped
+
+    # Forward SIGTERM to the process so it can shut down cleanly
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
+
+    healthcheck:
+      # The server has no HTTP endpoint; we just check that the process is alive.
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+# No named volumes needed — everything lives in the bind-mounted /volume1/docker/einklang/data folder.

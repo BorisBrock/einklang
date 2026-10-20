@@ -1,0 +1,14 @@
+port: 49152
+maxHistoryMessages: 500
+maxMessageLength: 2048
+maxUserNameLength: 64
+voiceEnabled: true
+rooms:
+  - name: "Lobby"
+    maxUsers: 10
+    password: "lobby123"
+    voiceEnabled: true
+  - name: "Game Room 1"
+    maxUsers: 4
+    password: "game123"
+    voiceEnabled: true

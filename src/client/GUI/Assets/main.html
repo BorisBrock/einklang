@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="pico.min.css" />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <script type="text/javascript" src="splitter.js"></script>
+    <script type="text/javascript" src="rooms.js"></script>
+    <script type="text/javascript" src="chat.js"></script>
+    <script type="text/javascript" src="voice.js"></script>
+    <script type="text/javascript" src="modal-add-room.js"></script>
+    <script type="text/javascript" src="modal-connection-error.js"></script>
+    <script type="text/javascript" src="modal-settings.js"></script>
+
+    <div class="layout">
+      <!-- Left fixed column -->
+      <div class="col-left" id="col-left">
+        <div class="col-left-header">
+          <h4>Chat Rooms</h4>
+          <button id="add-room-btn" onclick="showModal('add-room-dialog')" aria-label="Add Room" title="Add Room"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></button>
+        </div>
+        <div id="rooms-list"></div>
+        <p id="switch-room-error" style="color: var(--del-color); font-size: 0.75rem; display: none; margin: 0 0 0.5rem;"></p>
+        <button id="settings-btn" onclick="showModal('settings-dialog')" aria-label="Settings"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
+      </div>
+
+      <!-- Splitter between left and center -->
+      <div class="splitter" id="splitter-left"></div>
+
+      <!-- Center flexible column -->
+      <div class="col-center" id="col-center">
+        <p id="chat-placeholder" class="chat-placeholder">You are currently not in a chat room.</p>
+        <div id="chat-content" style="display: none;">
+          <div class="chat-header">
+            <h4 id="chat-title">Chat</h4>
+          </div>
+          <div id="chat-history" class="chat-messages"></div>
+          <div class="chat-input-row">
+            <button id="voice-mute-btn" onclick="handleVoiceMuteToggle()" title="Toggle microphone" aria-label="Toggle microphone" class="voice-btn">
+              <svg id="mic-on-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              <svg id="mic-off-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <!-- Hidden file picker for image attachment -->
+            <input type="file" id="chat-img-file" accept="image/*" style="display:none" />
+            <button id="chat-attach-btn" onclick="handleBtnChatAttach()" title="Attach image" aria-label="Attach image" class="voice-btn attach-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41A2 2 0 0 1 6.59 14.59L14.54 6.64"/></svg>
+            </button>
+            <input type="text" id="chat-msg" name="chat-msg" placeholder="Type a message…" autocomplete="off" maxlength="2048" />
+            <button id="chat-send-btn" onclick="handleBtnChatSend()" disabled aria-label="Send">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Splitter between center and right -->
+      <div class="splitter" id="splitter-right"></div>
+
+      <!-- Right fixed column -->
+      <div class="col-right" id="col-right">
+        <h4>Users</h4>
+        <div id="users-list"></div>
+      </div>
+    </div>
+
+    <!-- Add Room Dialog -->
+    <dialog id="add-room-dialog">
+      <article>
+        <h3>Connect to a Chat Room</h3>
+
+        <p id="connect-error" style="color: var(--del-color); display: none;"></p>
+
+        <!-- Row 1: Server address + Port -->
+        <div class="dlg-row">
+          <div class="dlg-col">
+            <label for="dlg-server">Server address</label>
+            <input type="text" id="dlg-server" placeholder="IP address or hostname" autocomplete="off" />
+          </div>
+          <div class="dlg-col dlg-col--narrow">
+            <label for="dlg-port">Port</label>
+            <input type="number" id="dlg-port" placeholder="49152" min="1" max="65535" value="49152" autocomplete="off" />
+          </div>
+        </div>
+
+        <!-- Row 2: Room name + User name -->
+        <div class="dlg-row">
+          <div class="dlg-col">
+            <label for="dlg-room">Chat room</label>
+            <input type="text" id="dlg-room" placeholder="Room name" autocomplete="off" />
+          </div>
+          <div class="dlg-col">
+            <label for="dlg-username">User name</label>
+            <input type="text" id="dlg-username" placeholder="Your name" autocomplete="off" maxlength="64" />
+          </div>
+        </div>
+
+        <!-- Row 3: Password (full width) -->
+        <label for="dlg-password">Password <small>(leave empty if none)</small></label>
+        <input type="password" id="dlg-password" placeholder="Password" autocomplete="off" />
+
+        <footer>
+          <button class="secondary" id="connect-cancel-btn">Cancel</button>
+          <button id="connect-btn" disabled>Connect</button>
+        </footer>
+      </article>
+    </dialog>
+
+    <!-- Settings Dialog -->
+    <dialog id="settings-dialog">
+      <article>
+        <h3>Settings</h3>
+
+        <fieldset class="settings-group">
+          <legend>Audio</legend>
+
+          <label for="input-gain-slider">Input Gain</label>
+          <div class="settings-slider-row">
+            <input type="range" id="input-gain-slider" min="0" max="200" step="1" />
+            <span id="input-gain-value" class="settings-gain-value">1.00×</span>
+          </div>
+
+          <label for="vad-threshold-slider">Voice Activation Threshold</label>
+          <div class="settings-slider-row">
+            <span class="settings-slider-label">Low</span>
+            <input type="range" id="vad-threshold-slider" min="0" max="100" step="1" />
+            <span class="settings-slider-label settings-slider-label--right">High</span>
+          </div>
+
+          <label class="settings-meter-label">Input Level Preview</label>
+          <p class="settings-meter-caption">Reflects applied gain &amp; threshold marker (red line)</p>
+          <div class="level-meter-track">
+            <div id="level-meter-bar" class="level-meter-bar"></div>
+            <div id="level-meter-threshold" class="level-meter-threshold"></div>
+          </div>
+        </fieldset>
+
+        <footer>
+          <button class="secondary" id="settings-cancel-btn">Cancel</button>
+          <button id="settings-ok-btn">OK</button>
+        </footer>
+      </article>
+    </dialog>
+
+    <!-- Connection Error Dialog -->
+    <dialog id="connection-error-dialog">
+      <article>
+        <h3>Connection Failed</h3>
+        <p id="connection-error-msg"></p>
+        <footer>
+          <button id="connection-error-ok-btn">OK</button>
+        </footer>
+      </article>
+    </dialog>
+  </body>
+</html>

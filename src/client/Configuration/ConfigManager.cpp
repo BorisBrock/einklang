@@ -1,0 +1,147 @@
+#include "ConfigManager.h"
+
+#include <cstdint>
+#include <fstream>
+#include <print>
+#include <string>
+
+#include <yaml-cpp/yaml.h>
+
+ConfigManager::ConfigManager(std::string filename)
+  : mFilename(std::move(filename))
+{
+}
+
+bool ConfigManager::Load()
+{
+  try
+  {
+    YAML::Node node = YAML::LoadFile(mFilename);
+
+    if (node["last-used-user-name"])
+      mConfig.lastUsedUserName = node["last-used-user-name"].as<std::string>();
+
+    if (node["last-used-server-address"])
+      mConfig.lastUsedServerAddress = node["last-used-server-address"].as<std::string>();
+
+    if (node["last-used-room-name"])
+      mConfig.lastUsedRoomName = node["last-used-room-name"].as<std::string>();
+
+    if (node["last-used-server-port"])
+      mConfig.lastUsedServerPort = node["last-used-server-port"].as<uint16_t>();
+
+    if (node["window-width"])
+      mConfig.windowWidth = node["window-width"].as<int>();
+
+    if (node["window-height"])
+      mConfig.windowHeight = node["window-height"].as<int>();
+
+    // Voice settings
+    if (node["voice-enabled"])
+      mConfig.voiceEnabled = node["voice-enabled"].as<bool>();
+    if (node["input-gain"])
+      mConfig.inputGain = node["input-gain"].as<float>();
+    if (node["output-volume"])
+      mConfig.outputVolume = node["output-volume"].as<float>();
+    if (node["vad-snr-factor"])
+      mConfig.vadSnrFactor = node["vad-snr-factor"].as<float>();
+    if (node["vad-attack-frames"])
+      mConfig.vadAttackFrames = node["vad-attack-frames"].as<int>();
+    if (node["vad-release-frames"])
+      mConfig.vadReleaseFrames = node["vad-release-frames"].as<int>();
+    if (node["vad-zcr-min"])
+      mConfig.vadZcrMin = node["vad-zcr-min"].as<float>();
+    if (node["vad-zcr-max"])
+      mConfig.vadZcrMax = node["vad-zcr-max"].as<float>();
+    if (node["vad-min-rms-floor"])
+      mConfig.vadMinRmsFloor = node["vad-min-rms-floor"].as<float>();
+    else if (node["vad-threshold"])  // backward-compat: older config files used vad-threshold
+      mConfig.vadMinRmsFloor = node["vad-threshold"].as<float>();
+    if (node["noise-filter"])
+      mConfig.noiseFilter = node["noise-filter"].as<bool>();
+
+    if (node["known-rooms"])
+    {
+      for (const auto& roomNode : node["known-rooms"])
+      {
+        ClientConfig::KnownRoom room;
+        room.address    = roomNode["address"].as<std::string>();
+        room.port       = roomNode["port"].as<uint16_t>();
+        room.roomName   = roomNode["room-name"].as<std::string>();
+        room.userName = roomNode["user-name"].as<std::string>();
+        if (roomNode["password"])
+          room.password = roomNode["password"].as<std::string>();
+        mConfig.knownRooms.push_back(room);
+      }
+    }
+  }
+  catch (const std::exception& e)
+  {
+    std::println("Error loading config '{}': {}", mFilename, e.what());
+    return false;
+  }
+
+  return true;
+}
+
+bool ConfigManager::Save() const
+{
+  try
+  {
+    YAML::Node root;
+    root["last-used-user-name"]    = mConfig.lastUsedUserName;
+    root["last-used-server-address"] = mConfig.lastUsedServerAddress;
+    root["last-used-room-name"]      = mConfig.lastUsedRoomName;
+    root["last-used-server-port"]    = mConfig.lastUsedServerPort;
+    root["window-width"]             = mConfig.windowWidth;
+    root["window-height"]            = mConfig.windowHeight;
+    root["voice-enabled"]            = mConfig.voiceEnabled;
+    root["input-gain"]               = mConfig.inputGain;
+    root["output-volume"]            = mConfig.outputVolume;
+    root["vad-snr-factor"]           = mConfig.vadSnrFactor;
+    root["vad-attack-frames"]        = mConfig.vadAttackFrames;
+    root["vad-release-frames"]       = mConfig.vadReleaseFrames;
+    root["vad-zcr-min"]              = mConfig.vadZcrMin;
+    root["vad-zcr-max"]              = mConfig.vadZcrMax;
+    root["vad-min-rms-floor"]        = mConfig.vadMinRmsFloor;
+    root["noise-filter"]             = mConfig.noiseFilter;
+
+    YAML::Node rooms;
+    for (const auto& room : mConfig.knownRooms)
+    {
+      YAML::Node roomNode;
+      roomNode["address"]     = room.address;
+      roomNode["port"]        = room.port;
+      roomNode["room-name"]   = room.roomName;
+      roomNode["user-name"]   = room.userName;
+      roomNode["password"]    = room.password;
+      rooms.push_back(roomNode);
+    }
+    root["known-rooms"] = rooms;
+
+    std::ofstream fout(mFilename);
+    if (!fout.is_open())
+    {
+      std::println("Error saving config: cannot open '{}' for writing.", mFilename);
+      return false;
+    }
+    fout << root;
+  }
+  catch (const std::exception& e)
+  {
+    std::println("Error saving config '{}': {}", mFilename, e.what());
+    return false;
+  }
+
+  return true;
+}
+
+ClientConfig& ConfigManager::Get()
+{
+  return mConfig;
+}
+
+const ClientConfig& ConfigManager::Get() const
+{
+  return mConfig;
+}

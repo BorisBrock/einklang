@@ -1,0 +1,820 @@
+/* ── High-contrast dark-theme overrides (replaces Pico defaults) ─────────── */
+:root,
+[data-theme=dark] {
+  /* Center-column / page background */
+  --background-color:                  #0b1520;
+
+  /* Side-panel background — clearly darker to frame the center */
+  --card-background-color:             #060f19;
+
+  /* Server-card groupings inside side panels */
+  --card-sectionning-background-color: #0e1f2e;
+
+  /* Primary body text — bright and readable */
+  --color:                             hsl(205, 30%, 88%);   /* ≈ #c9dee8 */
+
+  /* Muted / secondary text — clearly visible, not washed out */
+  --muted-color:                       hsl(205, 22%, 65%);   /* ≈ #91b5c6 */
+
+  /* Separator lines / borders — present but not harsh */
+  --muted-border-color:                hsl(205, 28%, 32%);   /* ≈ #3d6070 */
+
+  /* Primary accent — bright teal with enough luminance to pop on dark bg */
+  --primary:                           hsl(193, 85%, 50%);   /* ≈ #12c7e3 */
+  --primary-hover:                     hsl(193, 85%, 42%);   /* ≈ #0fa6bf */
+  --primary-focus:                     rgba(18, 199, 227, 0.22);
+  --primary-inverse:                   #fff;
+
+  /* Danger / delete colour */
+  --del-color:                         #f26060;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Left column header: title + add button on one line */
+.col-left-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.col-left-header h4 {
+  margin: 0;
+}
+
+#rooms-list {
+  flex: 1;
+}
+
+#settings-btn {
+  width: 100%;
+  margin: 0 !important;
+  padding: 0.4rem 0.75rem !important;
+  background: transparent;
+  color: hsl(205, 22%, 65%);
+  border: 1px solid hsl(205, 28%, 40%);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+#settings-btn:hover {
+  color: #fff;
+  border-color: var(--primary);
+  background: rgba(18, 199, 227, 0.18);
+}
+
+#add-room-btn {
+  flex-shrink: 0;
+  align-self: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1;
+  font-size: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: hsl(205, 22%, 65%);          /* explicit — more visible than muted default */
+  border: 1px solid hsl(205, 28%, 40%); /* clearly visible border */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+#add-room-btn:hover {
+  color: #fff;
+  border-color: var(--primary);
+  background: rgba(18, 199, 227, 0.18);
+}
+
+/* Fixed-width side columns — shared layout */
+.col-left,
+.col-right {
+  min-width: 100px;
+  max-width: 400px;
+  flex-shrink: 0; /* Prevents shrinking on resize */
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--card-background-color);
+}
+
+.col-left  { width: 220px; display: flex; flex-direction: column; }
+.col-right { width: 200px; }
+
+/* Center column grows to fill remaining space */
+.col-center {
+  flex: 1; /* Takes all remaining space */
+  overflow: hidden; /* chat-messages handles internal scrolling */
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Placeholder shown when not connected to any chat room */
+.chat-placeholder {
+  color: var(--muted-color);
+  text-align: center;
+  margin-top: 2rem;
+  font-style: italic;
+}
+
+/* Splitter/divider styling */
+.splitter {
+  width: 5px;
+  background: var(--muted-border-color);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.splitter:hover,
+.splitter.active {
+  background: var(--primary);
+}
+
+/* ----- Room list in the left column ----- */
+
+#rooms-list {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.server-card {
+  background: var(--card-sectionning-background-color, rgba(0,0,0,.1));
+  border-radius: var(--border-radius, 4px);
+  padding: 0.4rem 0.6rem;
+}
+
+.server-card-title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--primary);
+  margin-bottom: 0.2rem;
+  word-break: break-all;
+  cursor: context-menu; /* hint that right-click is available */
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.room-item {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  cursor: pointer;
+  color: hsl(205, 28%, 80%);  /* explicit bright text so it stands out on dark side panel */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.server-icon,
+.room-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.80;  /* raised from 0.65 — icons are more legible */
+}
+
+.room-item.active .room-icon {
+  opacity: 1;
+}
+
+.room-item:hover {
+  background: var(--primary-focus, rgba(var(--primary-rgb, 88,166,255),.12));
+}
+
+.room-item.active {
+  background: var(--primary);
+  color: var(--primary-inverse, #fff);
+  font-weight: bold;
+}
+
+.room-item.active:hover {
+  background: var(--primary);
+}
+
+.room-item.loading {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* ----- User list in the right column ----- */
+
+.user-item {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  color: hsl(205, 28%, 80%);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.user-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.80;
+}
+
+/* ----- Compact dialog overrides (all modals) ----- */
+
+dialog {
+  max-width: 28rem;
+}
+
+dialog article {
+  padding: 1.25rem 1.25rem 1rem;
+  margin: 0;
+  background: #152637;           /* clearly lighter than center bg — crisp modal layering */
+  border: 1px solid hsl(205, 28%, 36%);
+  border-radius: var(--border-radius, 6px);
+}
+
+dialog article h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+dialog article > p {
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+
+dialog label {
+  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+}
+
+dialog input {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  height: auto;
+  margin-bottom: 0;
+}
+
+dialog button {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.9rem;
+  height: auto;
+  margin: 0;
+}
+
+/* ----- Connect-to-room dialog layout ----- */
+
+dialog article footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+dialog article footer button {
+  width: auto;
+}
+
+.dlg-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.dlg-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* allow shrinking below content size */
+}
+
+.dlg-col--narrow {
+  flex: 0 0 6rem;
+}
+
+.dlg-col label {
+  margin-bottom: 0.2rem;
+}
+
+.dlg-col input {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+/* ----- Chat area ----- */
+
+#chat-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* allows shrinking in flex parent */
+  box-sizing: border-box;
+}
+
+.chat-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--muted-border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-header h4 {
+  margin: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0.5rem 0; /* right padding keeps bubbles clear of overlay scrollbar */
+  min-height: 0; /* required for flex child scrolling */
+}
+
+/* Minimalistic scrollbar — thin, no track, fades out when not hovering */
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb {
+  background: hsl(205, 20%, 40%);
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb:hover {
+  background: hsl(205, 20%, 58%);
+}
+
+.chat-input-row {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--muted-border-color);
+  margin-top: 0.25rem;
+}
+
+.chat-input-row input {
+  flex: 1;
+  margin: 0;
+}
+
+.chat-input-row button {
+  flex-shrink: 0;
+  margin: 0;
+  width: auto;
+}
+
+#chat-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#chat-send-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
+}
+
+/* ----- Chat bubbles ----- */
+
+.bubble-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.bubble-row.own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.bubble-row.other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.bubble-username {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  padding: 0 0.4rem;
+}
+
+/* Own username sits above the right-aligned bubble */
+.bubble-row.own .bubble-username {
+  color: var(--muted-color);
+  text-align: right;
+}
+
+.bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.bubble-row.own .bubble {
+  background: var(--primary);
+  color: var(--primary-inverse, #fff);
+  border-bottom-right-radius: 0.2rem;
+}
+
+/* Other users: color set via JS, bottom-left corner flattened */
+.bubble-row.other .bubble {
+  border-bottom-left-radius: 0.2rem;
+}
+
+/* ----- Links inside chat bubbles ----- */
+
+/* Own bubble (primary-color background): white underlined link */
+.bubble-row.own .bubble a {
+  color: inherit;
+  text-decoration: underline;
+  opacity: 0.85;
+}
+.bubble-row.own .bubble a:hover {
+  opacity: 1;
+}
+
+/* Other bubble (palette background): inherit the bubble text color */
+.bubble-row.other .bubble a {
+  color: inherit;
+  text-decoration: underline;
+  opacity: 0.85;
+}
+.bubble-row.other .bubble a:hover {
+  opacity: 1;
+}
+
+/* Selection highlight — must be explicit or WebKit renders it invisible */
+/* Rules are intentionally split: mixing ::selection and ::-webkit-selection
+   in one selector list causes WebKit to discard the entire rule. */
+.bubble-row.own .bubble::selection,
+.bubble-row.own .bubble *::selection {
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.bubble-row.own .bubble::-webkit-selection,
+.bubble-row.own .bubble *::-webkit-selection {
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.bubble-row.other .bubble::selection,
+.bubble-row.other .bubble *::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+.bubble-row.other .bubble::-webkit-selection,
+.bubble-row.other .bubble *::-webkit-selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ----- Context menu (room / server right-click) ----- */
+
+#room-context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 10rem;
+  background: #122030;           /* distinct from both side panel and center */
+  border: 1px solid hsl(205, 28%, 38%);
+  border-radius: var(--border-radius, 4px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.60);
+  padding: 0.25rem 0;
+  user-select: none;
+}
+
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: hsl(205, 30%, 85%);   /* explicit bright text on the darker menu bg */
+}
+
+.ctx-menu-icon {
+  flex-shrink: 0;
+}
+
+.ctx-menu-item:hover {
+  background: rgba(18, 199, 227, 0.20);
+  color: #fff;
+}
+
+.ctx-menu-item--danger {
+  color: #f26060;  /* explicit bright red — clearly distinct on dark menu */
+}
+
+.ctx-menu-item--danger:hover {
+  background: rgba(242, 96, 96, 0.22);
+  color: #ffb3b3;
+}
+
+/* ----- Voice chat controls ----- */
+
+.voice-btn {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  max-width: 2.2rem;
+  max-height: 2.2rem;
+  align-self: center;
+  box-sizing: border-box;
+  line-height: 1;
+  font-size: 0;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid hsl(205, 28%, 40%);
+  color: hsl(120, 60%, 60%);          /* green = mic on */
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.voice-btn:hover {
+  border-color: var(--primary);
+  background: rgba(18, 199, 227, 0.12);
+}
+
+.voice-btn.muted {
+  color: var(--del-color);             /* red = mic off */
+  border-color: var(--del-color);
+}
+
+.voice-btn.muted:hover {
+  background: rgba(242, 96, 96, 0.15);
+}
+
+/* Attach-image button — same sizing as voice-btn, teal accent */
+.attach-btn {
+  color: var(--primary);
+  border-color: hsl(205, 28%, 40%);
+}
+
+.attach-btn:hover {
+  border-color: var(--primary);
+  background: rgba(18, 199, 227, 0.18);
+}
+
+/* ----- Images inside chat bubbles ----- */
+
+.bubble--image {
+  padding: 0.35rem;
+}
+
+.chat-image {
+  display: block;
+  max-width: 320px;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.chat-image:hover {
+  opacity: 0.85;
+}
+
+/* ----- Image lightbox overlay ----- */
+
+.lightbox-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.82);
+  align-items: center;
+  justify-content: center;
+  animation: lightbox-fade-in 0.18s ease;
+}
+
+.lightbox-overlay.open {
+  display: flex;
+}
+
+@keyframes lightbox-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lightbox-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 92vw;
+  max-height: 90vh;
+}
+
+.lightbox-img {
+  display: block;
+  max-width: 90vw;
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -2.2rem;
+  right: -0.5rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1.4rem;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Speaking indicator dot next to user names */
+.speaking-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.speaking-indicator.active {
+  background: hsl(120, 60%, 55%);
+  box-shadow: 0 0 4px hsl(120, 60%, 55%);
+}
+
+/* ── Settings dialog ─────────────────────────────────────────────────────── */
+
+/* Bordered group box — wraps a set of related controls */
+.settings-group {
+  border: 1px solid hsl(205, 28%, 32%);
+  border-radius: var(--border-radius, 6px);
+  padding: 0.6rem 0.9rem 0.2rem;
+  margin: 0 0 0.75rem;
+}
+
+.settings-group legend {
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted-color);
+}
+
+.settings-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.settings-slider-row input[type=range] {
+  flex: 1;
+}
+
+.settings-slider-label {
+  font-size: 0.75rem;
+  color: var(--muted-color);
+  white-space: nowrap;
+  min-width: 2rem;
+}
+
+.settings-slider-label--right {
+  text-align: right;
+}
+
+/* Live gain readout — monospaced so the number doesn't cause layout shifts */
+.settings-gain-value {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color);
+  white-space: nowrap;
+  min-width: 3.2rem;
+  text-align: right;
+}
+
+.settings-meter-label {
+  margin-bottom: 0.15rem !important;
+}
+
+/* Small hint below the meter label */
+.settings-meter-caption {
+  font-size: 0.7rem;
+  color: var(--muted-color);
+  margin: 0 0 0.35rem;
+  line-height: 1.3;
+}
+
+.level-meter-track {
+  position: relative;
+  height: 16px;
+  background: var(--card-sectionning-background-color);
+  border: 1px solid hsl(205, 28%, 32%);
+  border-radius: 4px;
+  margin: 0 0 0.75rem;
+  overflow: visible;
+}
+
+.level-meter-bar {
+  height: 100%;
+  border-radius: 3px 0 0 3px;
+  width: 0%;
+  pointer-events: none;
+  transition: width 80ms linear, background 200ms;
+}
+
+.level-meter-threshold {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--del-color);
+  border-radius: 1px;
+  left: 0%;
+  pointer-events: none;
+  transition: left 150ms;
+}

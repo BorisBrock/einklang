@@ -1,0 +1,79 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Client (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${command:cmake.buildDirectory}/EinklangClientApp.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${command:cmake.buildDirectory}",
+      "environment": [],
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "Debug Server (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${command:cmake.buildDirectory}/EinklangServerApp.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${command:cmake.buildDirectory}",
+      "environment": [],
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "Debug Client (Linux)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:cmake.buildDirectory}/EinklangClientApp",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${command:cmake.buildDirectory}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set disassembly flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "Debug Server (Linux)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:cmake.buildDirectory}/EinklangServerApp",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${command:cmake.buildDirectory}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set disassembly flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "CMake: build"
+    }
+  ]
+}
