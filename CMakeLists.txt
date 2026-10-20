@@ -1,7 +1,38 @@
 cmake_minimum_required(VERSION 3.25)
 
+# ---------------------------------------------------------------------------
+# Version
+# ---------------------------------------------------------------------------
+# The git tag (vX.Y.Z) is the single source of truth. Release builds pass it
+# explicitly (-DEINKLANG_VERSION=1.2.3); otherwise it is derived from
+# `git describe`, falling back to 0.0.0-dev without git metadata.
+set(EINKLANG_VERSION "" CACHE STRING "Version compiled into the binaries (default: from git tag)")
+if(NOT EINKLANG_VERSION)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags --match "v[0-9]*" --dirty
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT_VARIABLE _git_version
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    if(_git_version MATCHES "^v(.+)$")
+        set(EINKLANG_VERSION_RESOLVED "${CMAKE_MATCH_1}")
+    else()
+        set(EINKLANG_VERSION_RESOLVED "0.0.0-dev")
+    endif()
+else()
+    string(REGEX REPLACE "^v" "" EINKLANG_VERSION_RESOLVED "${EINKLANG_VERSION}")
+endif()
+
+if(NOT EINKLANG_VERSION_RESOLVED MATCHES "^([0-9]+\\.[0-9]+\\.[0-9]+)")
+    message(FATAL_ERROR "EINKLANG_VERSION '${EINKLANG_VERSION_RESOLVED}' does not start with MAJOR.MINOR.PATCH")
+endif()
+set(_einklang_numeric_version "${CMAKE_MATCH_1}")
+
 project(Einklang
-    VERSION 0.0.1
+    VERSION ${_einklang_numeric_version}
     DESCRIPTION "Lightweight, self-hosted voice and text chat"
     HOMEPAGE_URL "https://github.com/BorisBrock/einklang"
     LANGUAGES CXX C)
@@ -111,6 +142,20 @@ FetchContent_Declare(
     SYSTEM
 )
 
+# nanosvg + stb_image_write — render the app icon SVGs at build time
+FetchContent_Declare(
+    nanosvg
+    URL      https://github.com/memononen/nanosvg/archive/239e102ec2c691f2902e20ace2ed36ee4a35cfe6.tar.gz
+    URL_HASH SHA256=2bc68bdb518d7800252042e5cad50a0ab321596f0cbf49ef2a752926329063d2
+    SOURCE_SUBDIR _no_cmake_ # header-only use; skip nanosvg's own CMake project
+)
+FetchContent_Declare(
+    stb_image_write
+    URL      https://raw.githubusercontent.com/nothings/stb/a7d4c2175630e1ea5b6f8dd00ab96fed0b97b96d/stb_image_write.h
+    URL_HASH SHA256=cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
+    DOWNLOAD_NO_EXTRACT TRUE
+)
+
 FetchContent_MakeAvailable(flatbuffers enet yaml_cpp sqlite3)
 if(EINKLANG_BUILD_CLIENT)
     FetchContent_MakeAvailable(opus miniaudio saucer)
@@ -199,6 +244,12 @@ target_include_directories(sqlite3_lib SYSTEM PUBLIC ${sqlite3_SOURCE_DIR})
 target_compile_definitions(sqlite3_lib PRIVATE SQLITE_OMIT_LOAD_EXTENSION SQLITE_DQS=0)
 target_link_libraries(sqlite3_lib PUBLIC Threads::Threads)
 
+# Version string for our own code, as EINKLANG_VERSION_STRING.
+message(STATUS "Einklang version: ${EINKLANG_VERSION_RESOLVED}")
+add_library(einklang_version INTERFACE)
+target_compile_definitions(einklang_version INTERFACE
+    EINKLANG_VERSION_STRING="${EINKLANG_VERSION_RESOLVED}")
+
 # Common compiler warnings for our own code (not for third-party targets).
 add_library(einklang_warnings INTERFACE)
 if(MSVC)
@@ -225,6 +276,50 @@ function(einklang_finalize_target target)
         target_link_options(${target} PRIVATE $<$<CONFIG:Release,MinSizeRel>:-s>)
     endif()
 endfunction()
+
+# ---------------------------------------------------------------------------
+# App icon
+# ---------------------------------------------------------------------------
+# icon.svg and icon-small.svg are the only sources. iconrender turns them into
+# PNGs (sizes up to ICON_SMALL_MAX from icon-small.svg) and an ICO, used for
+# the Windows executables and the Linux AppImage.
+if(EINKLANG_BUILD_CLIENT OR WIN32)
+    FetchContent_MakeAvailable(nanosvg stb_image_write)
+
+    set(ICON_SIZES 16 20 24 32 40 48 64 96 128 256)
+    set(ICON_SMALL_MAX 32)
+    set(ICON_DIR "${PROJECT_BINARY_DIR}/icons")
+
+    add_executable(iconrender packaging/iconrender.cpp)
+    target_include_directories(iconrender SYSTEM PRIVATE
+        "${nanosvg_SOURCE_DIR}/src" "${stb_image_write_SOURCE_DIR}")
+    target_compile_definitions(iconrender PRIVATE _CRT_SECURE_NO_WARNINGS)
+    if(UNIX)
+        target_link_libraries(iconrender PRIVATE m)
+    endif()
+
+    set(ICON_PNGS "")
+    foreach(size ${ICON_SIZES})
+        list(APPEND ICON_PNGS "${ICON_DIR}/einklang-${size}.png")
+    endforeach()
+    add_custom_command(
+        OUTPUT ${ICON_PNGS} "${ICON_DIR}/einklang.ico"
+        COMMAND iconrender
+            "${PROJECT_SOURCE_DIR}/icon.svg" "${PROJECT_SOURCE_DIR}/icon-small.svg"
+            ${ICON_SMALL_MAX} "${ICON_DIR}" ${ICON_SIZES}
+        DEPENDS iconrender icon.svg icon-small.svg
+        COMMENT "Rendering app icon"
+        VERBATIM)
+    add_custom_target(einklang_icons ALL DEPENDS ${ICON_PNGS} "${ICON_DIR}/einklang.ico")
+
+    # Icon for Explorer and the taskbar (resource ID 1, which WebUI also loads
+    # for the window's title bar).
+    if(WIN32)
+        file(WRITE "${ICON_DIR}/einklang.rc" "1 ICON \"einklang.ico\"\n")
+        set_source_files_properties("${ICON_DIR}/einklang.rc" PROPERTIES
+            OBJECT_DEPENDS "${ICON_DIR}/einklang.ico")
+    endif()
+endif()
 
 # ---------------------------------------------------------------------------
 # Client executable
@@ -267,22 +362,26 @@ add_executable(EinklangClientApp WIN32
 )
 
 # Bake GUI assets into the binary so no loose files are needed at runtime.
+# They are staged together with the app icon (as logo.svg); configure_file
+# makes CMake re-run, and so re-embed, whenever one of them changes.
+set(GUI_ASSET_DIR "${PROJECT_BINARY_DIR}/gui-assets")
+file(REMOVE_RECURSE "${GUI_ASSET_DIR}")
+file(GLOB GUI_ASSETS RELATIVE "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets"
+    "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets/*")
+foreach(asset ${GUI_ASSETS})
+    configure_file("src/client/GUI/Assets/${asset}" "${GUI_ASSET_DIR}/${asset}" COPYONLY)
+endforeach()
+configure_file(icon.svg "${GUI_ASSET_DIR}/logo.svg" COPYONLY)
+
 # saucer_embed() is provided by saucer-embed, which saucer itself pulls in.
 saucer_embed(
-    "${PROJECT_SOURCE_DIR}/src/client/GUI/Assets"
+    "${GUI_ASSET_DIR}"
     DESTINATION "${PROJECT_BINARY_DIR}/embedded"
     TARGET EinklangClientApp
 )
 
-# Embed the application icon into the Windows executable via a .rc resource file.
 if(WIN32)
-    set(APP_ICON_PATH "${PROJECT_SOURCE_DIR}/src/client/app.ico")
-    configure_file(
-        "${PROJECT_SOURCE_DIR}/src/client/app.rc.in"
-        "${PROJECT_BINARY_DIR}/app.rc"
-        @ONLY
-    )
-    target_sources(EinklangClientApp PRIVATE "${PROJECT_BINARY_DIR}/app.rc")
+    target_sources(EinklangClientApp PRIVATE "${ICON_DIR}/einklang.rc")
     # WIN32 subsystem requires WinMain; redirect to main() via the CRT entry point.
     if(MSVC)
         target_link_options(EinklangClientApp PRIVATE "LINKER:/ENTRY:mainCRTStartup")
@@ -292,6 +391,7 @@ endif()
 
 target_link_libraries(EinklangClientApp PRIVATE
     einklang_protocol
+    einklang_version
     einklang_warnings
     saucer::saucer
     saucer::embedded
@@ -330,11 +430,16 @@ add_executable(EinklangServerApp
 
 target_link_libraries(EinklangServerApp PRIVATE
     einklang_protocol
+    einklang_version
     einklang_warnings
     yaml-cpp::yaml-cpp
     sqlite3_lib
 )
 einklang_finalize_target(EinklangServerApp)
+
+if(WIN32)
+    target_sources(EinklangServerApp PRIVATE "${ICON_DIR}/einklang.rc")
+endif()
 
 add_custom_command(TARGET EinklangServerApp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

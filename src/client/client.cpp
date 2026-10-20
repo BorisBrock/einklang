@@ -1,7 +1,7 @@
+#include <cstdlib>
 #include <print>
 #include <string_view>
 #include <enet.h>
-#include "../common/Version.h"
 #include "Networking/EnetClient.h"
 #include "Networking/ServerStatusPoller.h"
 #include "GUI/WebUI.h"
@@ -41,8 +41,10 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Load configuration
-    ConfigManager configManager("client-config.yml");
+    // Load configuration. EINKLANG_CLIENT_CONFIG overrides the location; the
+    // AppImage uses it because its bundle is read-only.
+    const char* configPath = std::getenv("EINKLANG_CLIENT_CONFIG");
+    ConfigManager configManager(configPath && *configPath ? configPath : "client-config.yml");
     if (!configManager.Load())
     {
         std::println("Failed to load config.");

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ubuntu's apt CMake (3.28) is too old for saucer; the Windows image's
+      # CMake already matches its Visual Studio version.
+      - name: Set up CMake
+        if: runner.os == 'Linux'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-14 ninja-build pkg-config \
+            libgtk-4-dev libadwaita-1-dev libjson-glib-dev libwebkitgtk-6.0-dev
+
+      # Linux: GCC 14 + Ninja. Windows: the preinstalled Visual Studio
+      # generator (multi-config, hence --config / -C below).
+      - name: Configure
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            export CC=gcc-14 CXX=g++-14
+            generator=(-G Ninja)
+          fi
+          cmake -S . -B build "${generator[@]}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DEINKLANG_BUILD_CLIENT=ON \
+            -DEINKLANG_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,244 +1,88 @@
-# Einklang
+<p align="center">
+  <img src="icon.svg" alt="Einklang logo" width="128">
+</p>
 
-*The next generation voice chat for gamers.*
+<h1 align="center">Einklang</h1>
 
-A real-time voice and text chat application built in C++23, consisting of a server (`EinklangServerApp`) and a client (`EinklangClientApp`).
+<p align="center">
+  <b>The next generation voice chat for gamers.</b><br>
+  Crystal-clear voice, rich text chat, your own server – free, light and private.
+</p>
 
-> Einklang (German: *harmony, unison*) is the successor of the earlier *Reverb* project.
+<p align="center">
+  <a href="https://github.com/BorisBrock/einklang/actions/workflows/ci.yml"><img src="https://github.com/BorisBrock/einklang/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/BorisBrock/einklang/releases/latest"><img src="https://img.shields.io/github/v/release/BorisBrock/einklang?color=3a86ff" alt="Latest release"></a>
+  <a href="https://hub.docker.com/r/borisbrock/einklang"><img src="https://img.shields.io/docker/pulls/borisbrock/einklang?color=2496ed&logo=docker&logoColor=white" alt="Docker pulls"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-3a86ff" alt="Platforms: Windows and Linux">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-2ec4b6" alt="License: GPLv3"></a>
+  <img src="https://img.shields.io/badge/ads-none-ff006e" alt="No ads">
+  <img src="https://img.shields.io/badge/telemetry-none-ff006e" alt="No telemetry">
+</p>
 
-## Key Features
+<p align="center">
+  <img src="docs/images/main-window.png" alt="Einklang main window" width="100%">
+</p>
 
-Why choose Einklang? Here is how it stands out from alternatives like Discord, TeamSpeak, and Mumble:
+> *Einklang* is German for *harmony* or *unison* – and the successor of the earlier *Reverb* project.
 
-- **100% Free and Open-Source (FOSS):** No upfront costs, no subscriptions, and absolutely no ads.
-- **Privacy-First:** No telemetry or hidden data collection. Both the client and server are entirely under your control.
-- **Multi-Channel Servers:** Create and manage multiple chat rooms on a single server.
-- **Persistent Rich Text Chat:** Message history is securely saved, complete with support for links, images, and more.
-- **High-Quality Voice Chat:** Enjoy crystal-clear, ultra-low-latency voice communication.
-- **Lightweight and Efficient:** Say goodbye to bloatware. Einklang takes up only a few megabytes of disk space, and both the client and server are highly optimized for minimal CPU and RAM usage.
-- **Cross-Platform:** Currently available for Linux and Windows, with macOS support planned.
-- **Hassle-Free Setup:** Get started instantly with portable versions—just download and run. Hosting your own server is just as simple, featuring an easy-to-deploy Docker image and a single-port requirement for effortless network configuration.
+---
 
-## Dependencies
+## ✨ Features
 
-All dependencies are fetched automatically via CMake's `FetchContent` and pinned to exact releases — no manual installation required.
+- **🎙️ Crystal-clear voice.** Low-latency Opus audio with an adaptive jitter buffer, packet-loss recovery and a smart voice-activity gate – your team hears you, not your fan.
+- **💬 Rich text chat.** Persistent message history with clickable links and images. Just paste a screenshot to share it.
+- **🏠 Many rooms, many servers.** Every server hosts as many rooms as you like, optionally password-protected. See who's online and who's talking at a glance.
+- **🔒 Privacy first.** No account, no telemetry, no hidden data collection. Client and server are entirely under your control.
+- **🪶 Featherweight.** A few megabytes on disk, tiny CPU and RAM usage. No Electron, no bloat – it stays out of your game's way.
+- **🎨 Themes for every taste.** Midnight, Daylight, Nord, Dracula, Gruvbox, Rosé Pine and Solarized.
+- **🐳 Host it in minutes.** One Docker command, one UDP port to forward. That's it.
+- **💻 Cross-platform.** Windows and Linux today, macOS planned.
+- **💚 Free and open source.** No ads, no subscription – GPLv3, forever.
 
-| Library | Version | Purpose |
+<p align="center">
+  <img src="docs/images/themes.png" alt="Einklang in the Daylight, Nord, Gruvbox and Dracula themes" width="100%">
+</p>
+
+---
+
+## 📦 Get Einklang
+
+Download the latest version from the **[releases page](https://github.com/BorisBrock/einklang/releases/latest)**.
+
+| | Client | Server |
 |---|---|---|
-| [saucer](https://github.com/saucer/saucer) | 8.0.5 | Cross-platform WebView GUI (client) |
-| [ENet](https://github.com/zpl-c/enet) | 2.7.0 | UDP networking |
-| [FlatBuffers](https://github.com/google/flatbuffers) | 25.12.19 | Binary protocol serialization |
-| [yaml-cpp](https://github.com/jbeder/yaml-cpp) | 0.9.0 | Configuration file parsing |
-| [SQLite](https://www.sqlite.org) | 3.54.1 | Chat history persistence (server) |
-| [miniaudio](https://github.com/mackron/miniaudio) | 0.11.25 | Audio I/O (client) |
-| [Opus](https://github.com/xiph/opus) | 1.6.1 | Low-latency audio codec (client) |
+| **Windows** | `EinklangClient_Portable_Windows_<version>.zip` – unzip and run | `EinklangServer_Portable_Windows_<version>.zip` – unzip and run |
+| **Linux** | `Einklang-<version>-x86_64.AppImage` – `chmod +x` and run | Docker image [`borisbrock/einklang`](https://hub.docker.com/r/borisbrock/einklang) |
 
-## Prerequisites
-
-- CMake 3.25+
-- A C++23-capable compiler with `<print>` (GCC 14+, Clang 18+, MSVC 19.40+)
-- Linux client only: WebKitGTK 6.0, GTK 4 and libadwaita development packages
-- GDB (for debugging on Linux)
-
----
-
-## Building
-
-The build system copies the relevant config files next to each binary automatically after every build:
-- `build/<variant>/client-config.yml`
-- `build/<variant>/server-config.yml`
-
-### Step 1 — Select a build variant
-
-**In VS Code (recommended):**
-1. Open the Command Palette (`Ctrl+Shift+P`)
-2. Run **CMake: Select Variant**
-3. Choose **Debug** (debug symbols, no optimizations) or **Release** (optimized)
-
-The active variant is also shown in the status bar at the bottom of the window (e.g. `[Release]`). Click it there to switch directly.
-
-**In the terminal:**
-No separate step needed — the variant is passed at configure time (see below).
-
----
-
-### Step 2 — Configure
-
-Only required the first time per variant, or after changes to `CMakeLists.txt`.
-
-**In VS Code:**
-1. `Ctrl+Shift+P` → **CMake: Configure**
-
-CMake Tools automatically uses `build/Debug` or `build/Release` based on the active variant.
-
-**In the terminal:**
-```bash
-# Debug
-cmake -B build/Debug -DCMAKE_BUILD_TYPE=Debug
-
-# Release
-cmake -B build/Release -DCMAKE_BUILD_TYPE=Release
-```
-
----
-
-### Step 3 — Build
-
-**In VS Code:**
-- Press `Ctrl+Shift+B` (runs the default build task), **or**
-- `Ctrl+Shift+P` → **CMake: Build**, **or**
-- Click the **Build** button (hammer icon) in the status bar
-
-**In the terminal:**
-```bash
-# Debug
-cmake --build build/Debug --parallel
-
-# Release
-cmake --build build/Release --parallel
-```
-
----
-
-### Tests
+Start your own server with a single command:
 
 ```bash
-ctest --test-dir build/Debug --output-on-failure
+docker run -d --network host -v /path/to/data:/data borisbrock/einklang
 ```
 
-`JitterBufferTest` streams real Opus frames through a simulated network
-(jitter, loss, delay spikes, stalls) into the voice jitter buffer and checks
-that playback stays gap-free.
+Then forward **UDP port 24816** in your router and invite your friends. All the details are in the **[hosting guide](docs/HOSTING.md)**.
+
+<p align="center">
+  <img src="docs/images/settings.png" alt="The settings dialog with the theme picker" width="80%">
+</p>
 
 ---
 
-## Running
+## ☕ Support the project
 
-Always run the binaries from their build directory so they can find their config files. Start the server before the client.
+If Einklang keeps your squad talking, you can buy me a coffee. Thank you!
 
-**In VS Code:**
-1. Open the **Run and Debug** panel (`Ctrl+Shift+D`)
-2. Select **Debug Server** from the dropdown and press **F5** — this builds and launches the server under GDB
-3. Select **Debug Client** from the dropdown and press **F5** — this builds and launches the client under GDB
-
-VS Code supports multiple concurrent debug sessions, so both can run at the same time.
-
-To run **without** the debugger attached, use `Ctrl+F5` instead of `F5`.
-
-**In the terminal:**
-```bash
-# Debug variant
-cd build/Debug
-./EinklangServerApp   # start the server first
-./EinklangClientApp   # then the client
-
-# Release variant
-cd build/Release
-./EinklangServerApp
-./EinklangClientApp
-```
+<a href="https://www.buymeacoffee.com/borisbrock" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217"></a>
 
 ---
 
-## Configuration
+## 📚 Documentation
 
-### Server — `src/server/server-config.yml`
+- **[Hosting a server](docs/HOSTING.md)** – Docker, port forwarding and server configuration
+- **[Client configuration](docs/CLIENT.md)** – all settings in `client-config.yml`
+- **[Building from source](docs/BUILDING.md)** – dependencies, build, tests, debugging and releases
+- **[Voice pipeline](docs/VOICE.md)** – how the audio gets from your mic to your friends' ears
 
-| Key | Description |
-|---|---|
-| `port` | UDP port the server listens on (default: `24816`) |
-| `maxConnections` | Optional cap on simultaneous connections; default is the sum of all rooms' `maxUsers` plus 16 |
-| `maxHistoryMessages` | Number of chat messages retained per room |
-| `maxMessageLength` | Maximum length of a single chat message |
-| `maxUserNameLength` | Maximum username length |
-| `voiceEnabled` | Enable/disable voice chat globally |
-| `rooms` | List of rooms, each with `name`, `maxUsers`, `password`, `voiceEnabled` |
+## 📄 License
 
-### Client — `src/client/client-config.yml`
-
-| Key | Description |
-|---|---|
-| `user-name` | Your name in all chat rooms (defaults to the OS login name; editable under Settings → Profile) |
-| `voice-enabled` | Enable/disable voice chat on the client |
-| `input-gain` | Microphone gain multiplier |
-| `output-volume` | Speaker volume multiplier |
-| `vad-min-rms-floor` | Minimum energy before the voice-activity gate can open (default `0.005`) |
-| `vad-snr-factor` | Gate threshold relative to the estimated noise floor (default `4.0`) |
-| `vad-attack-frames` / `vad-release-frames` | Frames needed to open / held open after speech stops |
-| `vad-zcr-min` / `vad-zcr-max` | Speech-like zero-crossing-rate band (crossings/s) |
-| `noise-filter` | High-pass IIR filter to remove low-frequency noise (fan hum, etc.) |
-| `known-rooms` | Saved server connections (address, port, room, password) |
-
----
-
-## Hosting a Server
-
-The server needs exactly **one UDP port** (the `port` from `server-config.yml`, default `24816`). Chat, images, voice and server-status queries all use it; no TCP ports are involved. Clients only make outgoing connections and need no port forwarding.
-
-To make a home-hosted server reachable from the internet:
-
-1. Forward **UDP 24816** in your router to the machine running the server (for Proxmox: the VM/LXC's own IP, and allow the port in the Proxmox firewall if it is enabled).
-2. Use a DynDNS hostname if your public IP changes; clients resolve the address on every connect.
-3. On DS-Lite connections (no public IPv4), clients must connect via IPv6 — open the port for the server host in the router's IPv6 firewall instead. The server listens on IPv4 and IPv6.
-
-### Docker
-
-```bash
-docker compose up -d --build
-```
-
-`docker-compose.yml` uses host networking, so the server binds its UDP port directly on the host (no Docker NAT for voice traffic, IPv6 works out of the box). Adjust the `/data` volume path to your system; on first start a default `server-config.yml` is placed there. The image's healthcheck (`EinklangServerApp --healthcheck`) sends a real status query to the server, so the container is only reported healthy while it answers.
-
-> **Note:** Traffic is not encrypted. Room passwords, chat and voice travel in plain text, so treat a public server accordingly (or run it behind a VPN such as WireGuard/Tailscale).
-
----
-
-## Voice Pipeline
-
-```
-Mic → HPF → gain → VAD gate → Opus (FEC) → ENet ch. 2 (unreliable) → server relay
-    → client network thread → lock-free inbox → audio callback:
-      per-sender adaptive jitter buffer → Opus decode / FEC / PLC → mix → speaker
-```
-
-- **Decoding is driven by the audio output clock.** The playback callback pulls
-  exactly as many 20 ms frames as the device consumes, so network timing never
-  leaks into playback timing.
-- **Adaptive jitter buffer** (`src/client/Voice/JitterBuffer.*`): packets are
-  ordered by sequence number; the playout delay follows the observed jitter
-  (40–240 ms) and grows smoothly when packets start arriving later; excess
-  latency after a network stall is dropped.
-- **Loss handling:** a missing frame is rebuilt from the next packet's in-band
-  FEC data, otherwise Opus packet-loss concealment is used.
-- **No ENet packet throttling:** ENet's default throttle randomly discards
-  unreliable packets whenever round-trip time fluctuates; it is pinned open for
-  every peer because voice handles loss itself.
-- The audio threads never lock or allocate.
-
----
-
-## Debugging in VS Code
-
-The workspace ships two launch configurations usable from the **Run and Debug** panel (`Ctrl+Shift+D`):
-
-| Configuration | Binary |
-|---|---|
-| **Debug Client** | `EinklangClientApp` |
-| **Debug Server** | `EinklangServerApp` |
-
-Both configurations:
-- Automatically trigger a build before launching
-- Set the working directory to the active variant's build folder (so config files are found)
-- Attach GDB with pretty-printing and Intel disassembly flavour enabled
-
-**Typical debug workflow:**
-1. Set breakpoints by clicking in the gutter next to any source line
-2. Select **Debug Server** → press **F5** — the server starts and pauses at any breakpoints
-3. Select **Debug Client** → press **F5** — the client starts in a second debug session
-4. Use the **Debug toolbar** (or keyboard shortcuts) to step, continue, inspect variables, and view the call stack
-
-> **Tip:** The **Debug Console** (`Ctrl+Shift+Y`) accepts GDB/MI commands directly while a session is paused.
-
-## License
-
-Einklang is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+Einklang is free software, licensed under the [GNU General Public License v3](LICENSE) or (at your option) any later version.

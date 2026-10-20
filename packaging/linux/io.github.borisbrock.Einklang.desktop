@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Einklang
+Comment=Lightweight, self-hosted voice and text chat
+Exec=EinklangClientApp
+Icon=io.github.borisbrock.Einklang
+Categories=Network;Chat;AudioVideo;
+Terminal=false

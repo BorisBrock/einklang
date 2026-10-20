@@ -689,16 +689,11 @@ body {
   max-width: 22rem;
 }
 
-.chat-placeholder-icon {
-  width: 3.25rem;
-  height: 3.25rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-  color: var(--accent);
-  background: var(--accent-soft);
+/* The app icon, copied from icon.svg into the embedded assets at build time */
+.chat-placeholder-logo {
+  width: 5rem;
+  height: 5rem;
+  margin-bottom: 0.75rem;
 }
 
 .chat-placeholder h4 {
@@ -1794,4 +1789,11 @@ dialog input[readonly] {
 #settings-dialog article > footer {
   margin: 0;
   border-radius: 0;
+}
+
+#settings-dialog .app-version {
+  margin-right: auto;
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
