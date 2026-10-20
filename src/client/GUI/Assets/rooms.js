@@ -26,14 +26,8 @@ function handleRoomEntryResponse(success, errorMessage) {
     }
   } else {
     if (isDialogOpen) {
-      // Reset dialog button state
-      const connectBtn = document.getElementById("connect-btn");
-      if (connectBtn) {
-        connectBtn.disabled = false;
-        connectBtn.textContent = "Connect";
-      }
-      // Close the connect dialog so the error modal can be shown
-      window.closeModal(dialog).then(() => showConnectionError(errorMessage));
+      // Keep the connect dialog open, so the user can fix the input and retry
+      window.showConnectError(errorMessage);
     } else {
       // Re-enable any loading room item
       document.querySelectorAll(".room-item.loading").forEach((el) => {

@@ -82,8 +82,6 @@
       <article>
         <h3 id="add-room-title">Connect to a Chat Room</h3>
 
-        <p id="connect-error" class="dialog-error" style="display: none;"></p>
-
         <!-- Row 1: Server address + Port -->
         <div class="dlg-row">
           <div class="dlg-col">
@@ -103,6 +101,8 @@
         <!-- Row 3: Password (full width) -->
         <label for="dlg-password">Password <small>(leave empty if none)</small></label>
         <input type="password" id="dlg-password" placeholder="Password" autocomplete="off" />
+
+        <p id="connect-error" class="dialog-error" role="alert" style="display: none;"></p>
 
         <footer>
           <button class="secondary dlg-footer-start" id="use-join-code-btn">Use join code…</button>

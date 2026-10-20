@@ -34,6 +34,7 @@ static void ConnectAndEnterRoom(WebViewModel& viewModel, EnetClient& enetClient,
   if (!enetClient.SendPacket(packet))
   {
     std::println("Failed to send room entry request packet.");
+    viewModel.NotifyRoomEntryResponse(false, "Could not reach the server. Please check the address and port.");
   }
 }
 

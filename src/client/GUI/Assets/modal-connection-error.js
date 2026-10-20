@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Close on click outside the article
   errorDialog.addEventListener("click", (e) => {
+    // Only a click on the backdrop itself; anything inside (even keyboard-
+    // activated buttons, which report 0/0 coordinates) is not outside.
+    if (e.target !== errorDialog) return;
     const rect = errorDialog.querySelector("article").getBoundingClientRect();
     const inside =
       e.clientX >= rect.left && e.clientX <= rect.right &&
