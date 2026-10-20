@@ -82,17 +82,26 @@ cmake --build build/Release --parallel
 ### Tests
 
 ```bash
-ctest --test-dir build/Debug --output-on-failure
+ctest --test-dir build/Debug --output-on-failure --parallel 4
 ```
 
-`JitterBufferTest` streams real Opus frames through a simulated network
-(jitter, loss, delay spikes, stalls) into the voice jitter buffer and checks
-that playback stays gap-free.
+The C++ tests use [doctest](https://github.com/doctest/doctest), fetched like
+the other dependencies. Every executable accepts doctest's options, e.g.
+`build/Debug/ServerTests -tc="*history*"` to run matching test cases or
+`--success` to list every assertion.
 
-`JoinCodeTest` (run with Node.js, skipped if `node` isn't found) round-trips
-join codes through `src/client/GUI/Assets/joincode.js` and checks that
-`tools/join-code-generator.html` carries an identical copy of the codec. After
-changing `joincode.js`, update the copy with `node tests/JoinCodeTest.js --sync`.
+| Test | What it covers |
+|---|---|
+| `CommonTests` | `src/common`: Base64, events, the status query wire format, the lock-free ring buffer |
+| `ServerTests` | `server-config.yml` loading and saving, the SQLite chat database (persistence, history limits, images, schema migration), rooms, decoding of client packets (built with the real client code, plus malformed and random input) and the status payload |
+| `ClientTests` | `client-config.yml` loading and saving, encoding of client packets, decoding of server packets |
+| `IntegrationTests` | A real server and real clients talking over UDP on localhost: room entry, chat, images, history, user lists, voice relay, status queries, persistence across restarts and reconnecting |
+| `JitterBufferTest` | Streams real Opus frames through a simulated network (jitter, loss, delay spikes, stalls) into the voice jitter buffer and checks that playback stays gap-free. Built with the client only. |
+| `JoinCodeTest` | Round-trips join codes through `src/client/GUI/Assets/joincode.js` and checks that `tools/join-code-generator.html` carries an identical copy of the codec. Needs Node.js (skipped if `node` isn't found). After changing `joincode.js`, update the copy with `node tests/JoinCodeTest.js --sync`. |
+
+All but `JitterBufferTest` also build with `-DEINKLANG_BUILD_CLIENT=OFF`. The
+integration tests bind their servers to ports chosen by the OS, so several
+test runs can share a machine.
 
 ## Running
 
@@ -144,7 +153,7 @@ Both configurations:
 
 ## CI and releases
 
-- **CI** (`.github/workflows/ci.yml`) builds everything and runs the tests on Linux and Windows for every pull request and push to `main`, and checks that the Docker image builds.
+- **CI** (`.github/workflows/ci.yml`) builds everything and runs the tests on Linux and Windows for every pull request and push to `main`, runs the server/networking tests again under AddressSanitizer and UndefinedBehaviorSanitizer, and checks that the Docker image builds.
 - **Release** (`.github/workflows/release.yml`) runs when a version tag is pushed. The tag is the single source of truth for the version — there is no version file to bump:
 
   ```bash

@@ -53,11 +53,16 @@ bool EnetServer::Stop()
   if (mServer)
   {
     // Tell connected clients right away so they start reconnecting instead
-    // of waiting for a timeout.
+    // of waiting for a timeout. enet_peer_disconnect_now() raises no event,
+    // so run the disconnect handlers here to release the peers' sessions.
     for (ENetPeer* peer = mServer->peers; peer < mServer->peers + mServer->peerCount; ++peer)
     {
       if (peer->state == ENET_PEER_STATE_CONNECTED)
+      {
+        mPacketHandler.onClientDisconnected.emit(peer);
+        peer->data = NULL;
         enet_peer_disconnect_now(peer, 0);
+      }
     }
     enet_host_flush(mServer);
 
@@ -67,6 +72,11 @@ bool EnetServer::Stop()
   gInterceptTarget = nullptr;
   enet_deinitialize();
   return true;
+}
+
+uint16_t EnetServer::Port() const
+{
+  return mServer != nullptr ? mServer->address.port : 0;
 }
 
 ClientPacketHandler& EnetServer::PacketHandler()

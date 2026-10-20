@@ -278,6 +278,38 @@ function(einklang_finalize_target target)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# Source groups
+# ---------------------------------------------------------------------------
+# Shared between the executables and the tests. Server and client each have a
+# ConfigManager (and a ChatConnector), so a single binary may only link one
+# side's configuration sources.
+set(EINKLANG_SERVER_CORE_SOURCES
+    src/server/Networking/EnetServer.cpp
+    src/server/Networking/ClientPacketHandler.cpp
+    src/server/Networking/ServerPacketFactory.cpp
+    src/server/Networking/StatusProbe.cpp
+    src/server/Rooms/ChatDatabase.cpp
+    src/server/Rooms/ChatRoom.cpp
+    src/server/Rooms/ChatRoomManager.cpp
+    src/server/Rooms/User.cpp
+    src/server/Connectors/LoginConnector.cpp
+    src/server/Connectors/ChatConnector.cpp
+    src/server/Connectors/VoiceConnector.cpp
+)
+set(EINKLANG_SERVER_CONFIG_SOURCES
+    src/server/Configuration/ConfigManager.cpp
+)
+set(EINKLANG_CLIENT_NET_SOURCES
+    src/client/Networking/EnetClient.cpp
+    src/client/Networking/ClientPacketFactory.cpp
+    src/client/Networking/ServerPacketHandler.cpp
+    src/client/Networking/ServerStatusPoller.cpp
+)
+set(EINKLANG_CLIENT_CONFIG_SOURCES
+    src/client/Configuration/ConfigManager.cpp
+)
+
+# ---------------------------------------------------------------------------
 # App icon
 # ---------------------------------------------------------------------------
 # icon.svg and icon-small.svg are the only sources. iconrender turns them into
@@ -336,10 +368,8 @@ endif()
 # The keyword is silently ignored on Linux/macOS.
 add_executable(EinklangClientApp WIN32
     src/client/client.cpp
-    src/client/Networking/EnetClient.cpp
-    src/client/Networking/ClientPacketFactory.cpp
-    src/client/Networking/ServerPacketHandler.cpp
-    src/client/Networking/ServerStatusPoller.cpp
+    ${EINKLANG_CLIENT_NET_SOURCES}
+    ${EINKLANG_CLIENT_CONFIG_SOURCES}
     src/client/Connectors/ChatConnector.cpp
     src/client/Connectors/ConnectionConnector.cpp
     src/client/Connectors/ReconnectConnector.cpp
@@ -348,7 +378,6 @@ add_executable(EinklangClientApp WIN32
     src/client/Connectors/VoiceConnector.cpp
     src/client/GUI/WebUI.cpp
     src/client/GUI/WebViewModel.cpp
-    src/client/Configuration/ConfigManager.cpp
     src/client/Voice/AudioDevices.cpp
     src/client/Voice/VoiceCapture.cpp
     src/client/Voice/VoiceEncoder.cpp
@@ -407,18 +436,8 @@ endif() # EINKLANG_BUILD_CLIENT
 # ---------------------------------------------------------------------------
 add_executable(EinklangServerApp
     src/server/server.cpp
-    src/server/Networking/EnetServer.cpp
-    src/server/Networking/ClientPacketHandler.cpp
-    src/server/Networking/ServerPacketFactory.cpp
-    src/server/Networking/StatusProbe.cpp
-    src/server/Configuration/ConfigManager.cpp
-    src/server/Rooms/ChatDatabase.cpp
-    src/server/Rooms/ChatRoom.cpp
-    src/server/Rooms/ChatRoomManager.cpp
-    src/server/Rooms/User.cpp
-    src/server/Connectors/LoginConnector.cpp
-    src/server/Connectors/ChatConnector.cpp
-    src/server/Connectors/VoiceConnector.cpp
+    ${EINKLANG_SERVER_CORE_SOURCES}
+    ${EINKLANG_SERVER_CONFIG_SOURCES}
 )
 
 target_link_libraries(EinklangServerApp PRIVATE
@@ -444,16 +463,88 @@ add_custom_command(TARGET EinklangServerApp POST_BUILD
 # Tests
 # ---------------------------------------------------------------------------
 option(EINKLANG_BUILD_TESTS "Build the test executables" ON)
-if(EINKLANG_BUILD_TESTS AND EINKLANG_BUILD_CLIENT)
+if(EINKLANG_BUILD_TESTS)
     enable_testing()
-    add_executable(JitterBufferTest
-        tests/JitterBufferTest.cpp
-        src/client/Voice/JitterBuffer.cpp
-        src/client/Voice/VoiceDecoder.cpp
-        src/client/Voice/VoiceEncoder.cpp
+
+    # doctest — single-header unit test framework
+    FetchContent_Declare(
+        doctest
+        URL      https://raw.githubusercontent.com/doctest/doctest/v2.4.12/doctest/doctest.h
+        URL_HASH SHA256=94029a7d32da24a56249658147dbd2b33ff0b9ed665295cbbaf19aafff5b0ced
+        DOWNLOAD_NO_EXTRACT TRUE
     )
-    target_link_libraries(JitterBufferTest PRIVATE einklang_warnings opus)
-    add_test(NAME JitterBufferTest COMMAND JitterBufferTest)
+    FetchContent_MakeAvailable(doctest)
+
+    # doctest's main(), compiled once and shared by all doctest executables
+    add_library(einklang_test_main STATIC tests/TestMain.cpp)
+    target_include_directories(einklang_test_main SYSTEM PUBLIC ${doctest_SOURCE_DIR})
+    target_include_directories(einklang_test_main PUBLIC ${PROJECT_SOURCE_DIR}/tests)
+    target_link_libraries(einklang_test_main PUBLIC einklang_warnings)
+    target_compile_definitions(einklang_test_main PUBLIC
+        EINKLANG_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    if(WIN32)
+        target_compile_definitions(einklang_test_main PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN)
+    endif()
+
+    # einklang_add_test(<name> SOURCES ... LIBS ...)
+    function(einklang_add_test name)
+        cmake_parse_arguments(ARG "" "" "SOURCES;LIBS" ${ARGN})
+        add_executable(${name} ${ARG_SOURCES})
+        target_link_libraries(${name} PRIVATE einklang_test_main ${ARG_LIBS})
+        add_test(NAME ${name} COMMAND ${name})
+        set_tests_properties(${name} PROPERTIES TIMEOUT 120)
+    endfunction()
+
+    # Header-only helpers in src/common
+    einklang_add_test(CommonTests
+        SOURCES
+            tests/common/Base64Test.cpp
+            tests/common/EventTest.cpp
+            tests/common/ServerQueryTest.cpp
+            tests/common/SpscRingBufferTest.cpp)
+
+    # Server configuration, rooms, SQLite persistence and packet handling
+    einklang_add_test(ServerTests
+        SOURCES
+            tests/server/ServerConfigTest.cpp
+            tests/server/ChatDatabaseTest.cpp
+            tests/server/ChatRoomTest.cpp
+            tests/server/ChatRoomManagerTest.cpp
+            tests/server/ClientPacketHandlerTest.cpp
+            tests/server/ServerPacketFactoryTest.cpp
+            ${EINKLANG_SERVER_CORE_SOURCES}
+            ${EINKLANG_SERVER_CONFIG_SOURCES}
+            src/client/Networking/ClientPacketFactory.cpp # builds real client packets
+        LIBS einklang_protocol einklang_version yaml-cpp::yaml-cpp sqlite3_lib)
+
+    # Client configuration and packet encoding/decoding (no GUI or audio)
+    einklang_add_test(ClientTests
+        SOURCES
+            tests/client/ClientConfigTest.cpp
+            tests/client/ClientPacketFactoryTest.cpp
+            tests/client/ServerPacketHandlerTest.cpp
+            ${EINKLANG_CLIENT_NET_SOURCES}
+            ${EINKLANG_CLIENT_CONFIG_SOURCES}
+        LIBS einklang_protocol yaml-cpp::yaml-cpp)
+
+    # A real server and real clients talking over UDP on localhost
+    einklang_add_test(IntegrationTests
+        SOURCES
+            tests/integration/ClientServerTest.cpp
+            ${EINKLANG_SERVER_CORE_SOURCES}
+            ${EINKLANG_CLIENT_NET_SOURCES}
+        LIBS einklang_protocol einklang_version sqlite3_lib)
+
+    if(EINKLANG_BUILD_CLIENT)
+        add_executable(JitterBufferTest
+            tests/JitterBufferTest.cpp
+            src/client/Voice/JitterBuffer.cpp
+            src/client/Voice/VoiceDecoder.cpp
+            src/client/Voice/VoiceEncoder.cpp
+        )
+        target_link_libraries(JitterBufferTest PRIVATE einklang_warnings opus)
+        add_test(NAME JitterBufferTest COMMAND JitterBufferTest)
+    endif()
 
     # The join code codec is JavaScript; test it when Node.js is available
     find_program(NODE_EXECUTABLE node)

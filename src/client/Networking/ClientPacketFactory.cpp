@@ -75,8 +75,9 @@ std::vector<std::uint8_t> ClientPacketFactory::VoiceFrame(std::uint32_t sequence
   Voice::VoiceFrameHeader header{};
   header.sequenceNumber = sequenceNumber;
   std::memcpy(packet.data() + sizeof(PacketType), &header, Voice::kHeaderSize);
-  std::memcpy(packet.data() + sizeof(PacketType) + Voice::kHeaderSize,
-              opusPayload.data(), opusPayload.size());
+  if (!opusPayload.empty())
+    std::memcpy(packet.data() + sizeof(PacketType) + Voice::kHeaderSize,
+                opusPayload.data(), opusPayload.size());
 
   return packet;
 }

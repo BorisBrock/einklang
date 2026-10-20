@@ -11,9 +11,13 @@
 class EnetServer
 {
 public:
-  // maxConnections is clamped to what ENet supports.
+  // maxConnections is clamped to what ENet supports. Port 0 binds a free
+  // port chosen by the OS (see Port()).
   bool Start(uint16_t port, std::size_t maxConnections);
   bool Stop();
+
+  // The UDP port the server is bound to; 0 if not started.
+  uint16_t Port() const;
 
   void ProcessEvents();
 
