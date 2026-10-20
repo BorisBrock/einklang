@@ -112,6 +112,21 @@ that playback stays gap-free.
 
 ---
 
+### CI and releases
+
+- **CI** (`.github/workflows/ci.yml`) builds everything and runs the tests on Linux and Windows for every pull request and push to `main`, and checks that the Docker image builds.
+- **Release** (`.github/workflows/release.yml`) runs when a version tag is pushed. Bump `EINKLANG_VERSION_*` in `src/common/Version.h` on `main` first; the tag must match it:
+
+  ```bash
+  git tag v1.0.0 && git push origin v1.0.0
+  ```
+
+  It publishes a GitHub release with `Einklang-<version>-x86_64.AppImage` (Linux client), `EinklangClient_Portable_Windows_<version>.zip` and `EinklangServer_Portable_Windows_<version>.zip`, and pushes `<user>/einklang-server:<version>` (plus `latest`) to Docker Hub. It needs the repository variable `DOCKERHUB_USERNAME` and the secret `DOCKERHUB_TOKEN`.
+
+The AppImage keeps its configuration in `~/.config/einklang/client-config.yml` (the bundle itself is read-only); `EINKLANG_CLIENT_CONFIG` overrides the config path for any build. Running `packaging/linux/build-appimage.sh <build-dir> <version>` builds the AppImage locally.
+
+---
+
 ## Running
 
 Always run the binaries from their build directory so they can find their config files. Start the server before the client.

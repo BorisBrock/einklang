@@ -1,0 +1,186 @@
+name: Release
+
+# Publishes a release when a version tag (e.g. v1.0.0) is pushed. The tag must
+# point at a commit on main and match EINKLANG_VERSION_STRING in Version.h.
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tag
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check tag is on main and matches Version.h
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          header_version=$(grep -oP 'EINKLANG_VERSION_STRING\s+"\K[^"]+' src/common/Version.h)
+          if [[ "$version" != "$header_version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match EINKLANG_VERSION_STRING ($header_version) in src/common/Version.h"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME points at a commit that is not on main"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: Linux AppImage
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-14 ninja-build pkg-config file dpkg-dev \
+            libglib2.0-bin libgdk-pixbuf2.0-bin librsvg2-common \
+            libgtk-4-dev libadwaita-1-dev libjson-glib-dev libwebkitgtk-6.0-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DEINKLANG_BUILD_CLIENT=ON \
+            -DEINKLANG_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package AppImage
+        run: packaging/linux/build-appimage.sh build "${{ needs.verify.outputs.version }}" release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: release/*.AppImage
+          if-no-files-found: error
+
+  windows:
+    name: Windows zip
+    needs: verify
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
+
+      - name: Configure
+        run: cmake -S . -B build -DEINKLANG_BUILD_CLIENT=ON -DEINKLANG_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package zips
+        shell: pwsh
+        run: |
+          $version = '${{ needs.verify.outputs.version }}'
+
+          # Ship the MSVC runtime app-locally so the zips run without the
+          # Visual C++ Redistributable installed.
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $crtDir = Get-ChildItem "$vsPath\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory |
+            Sort-Object FullName | Select-Object -Last 1
+          if (-not $crtDir) { throw "MSVC runtime redist directory not found" }
+          $crt = Get-ChildItem $crtDir.FullName -Filter *.dll | ForEach-Object FullName
+
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive -DestinationPath "release/EinklangClient_Portable_Windows_$version.zip" -Path (
+            @('build/Release/EinklangClientApp.exe', 'src/client/client-config.yml', 'LICENSE') + $crt)
+          Compress-Archive -DestinationPath "release/EinklangServer_Portable_Windows_$version.zip" -Path (
+            @('build/Release/EinklangServerApp.exe', 'src/server/server-config.yml', 'LICENSE') + $crt)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: release/*.zip
+          if-no-files-found: error
+
+  docker:
+    name: Docker Hub image
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_USERNAME }}/einklang-server
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          flavor: |
+            latest=true
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  github-release:
+    name: GitHub release
+    needs: [verify, linux, windows, docker]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Einklang ${{ needs.verify.outputs.version }}" \
+            --generate-notes \
+            --verify-tag
