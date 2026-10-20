@@ -60,7 +60,7 @@ Start your own server with a single command:
 docker run -d --network host -v /path/to/data:/data borisbrock/einklang
 ```
 
-Then forward **UDP port 24816** in your router and invite your friends. All the details are in the **[hosting guide](docs/HOSTING.md)**.
+Then forward **UDP port 24816** in your router and invite your friends, ideally with a short **[join code](docs/HOSTING.md#inviting-friends-with-a-join-code)** like `vkua27kaRHNgo` that holds the server, room and password. All the details are in the **[hosting guide](docs/HOSTING.md)**.
 
 <p align="center">
   <img src="docs/images/settings.png" alt="The settings dialog with the theme picker" width="80%">

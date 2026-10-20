@@ -13,7 +13,9 @@
     <script type="text/javascript" src="rooms.js"></script>
     <script type="text/javascript" src="chat.js"></script>
     <script type="text/javascript" src="voice.js"></script>
+    <script type="text/javascript" src="joincode.js"></script>
     <script type="text/javascript" src="modal-add-room.js"></script>
+    <script type="text/javascript" src="modal-join-code.js"></script>
     <script type="text/javascript" src="modal-edit-server.js"></script>
     <script type="text/javascript" src="modal-connection-error.js"></script>
     <script type="text/javascript" src="modal-settings.js"></script>
@@ -102,8 +104,26 @@
         <input type="password" id="dlg-password" placeholder="Password" autocomplete="off" />
 
         <footer>
+          <button class="secondary dlg-footer-start" id="use-join-code-btn">Use join code…</button>
           <button class="secondary" id="connect-cancel-btn">Cancel</button>
           <button id="connect-btn" disabled>Connect</button>
+        </footer>
+      </article>
+    </dialog>
+
+    <!-- Join Code Dialog -->
+    <dialog id="join-code-dialog">
+      <article>
+        <h3>Use Join Code</h3>
+
+        <p id="join-code-error" class="dialog-error" style="display: none;"></p>
+
+        <label for="join-code-input">Paste the join code you were given</label>
+        <textarea id="join-code-input" rows="3" placeholder="Join code" autocomplete="off" spellcheck="false"></textarea>
+
+        <footer>
+          <button class="secondary" id="join-code-cancel-btn">Cancel</button>
+          <button id="join-code-apply-btn" disabled>Continue</button>
         </footer>
       </article>
     </dialog>

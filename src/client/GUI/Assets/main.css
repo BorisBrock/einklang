@@ -1338,6 +1338,23 @@ dialog article footer button {
   width: auto;
 }
 
+/* A footer button pushed to the left edge, away from Cancel / OK */
+dialog article footer .dlg-footer-start {
+  margin-right: auto;
+}
+
+/* ----- Join code dialog ----- */
+
+#join-code-input {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.65rem;
+  margin-bottom: 0;
+  border-radius: var(--radius-sm);
+  resize: none;
+  word-break: break-all;
+}
+
 .dialog-error {
   color: var(--danger);
   background: var(--danger-soft);

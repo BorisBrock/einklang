@@ -44,18 +44,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const cancelBtn  = document.getElementById("connect-cancel-btn");
   const errorEl    = document.getElementById("connect-error");
   const titleEl    = document.getElementById("add-room-title");
+  const joinCodeBtn = document.getElementById("use-join-code-btn");
 
   if (!dialog) return;
 
   // Opens the dialog. With an address the server fields are prefilled and
   // locked ("add a room to this server"); without one it is the plain
-  // connect-to-anything dialog.
-  // opts: { address, port, room, needsPassword }
+  // connect-to-anything dialog, optionally filled from a decoded join code.
+  // opts: { address, port, room, needsPassword } or { joinCode: { address, port, room, password } }
   window.openAddRoomDialog = (opts = {}) => {
     const locked = opts.address !== undefined;
 
     serverEl.readOnly = locked;
     portEl.readOnly   = locked;
+    joinCodeBtn.style.display = locked ? "none" : "";
     if (locked) {
       serverEl.value     = opts.address;
       portEl.value       = String(opts.port);
@@ -63,6 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
       passwordEl.value   = "";
       titleEl.textContent = "Add Room to " + opts.address;
     } else {
+      if (opts.joinCode) {
+        serverEl.value   = opts.joinCode.address;
+        portEl.value     = String(opts.joinCode.port);
+        roomEl.value     = opts.joinCode.room;
+        passwordEl.value = opts.joinCode.password;
+      }
       titleEl.textContent = "Connect to a Chat Room";
     }
 
@@ -70,11 +78,19 @@ document.addEventListener("DOMContentLoaded", () => {
     validate();
 
     // Put the cursor in the first field that still needs input
-    const focusEl = !locked ? serverEl
+    const focusEl = opts.joinCode ? connectBtn
+                  : !locked ? serverEl
                   : (opts.room && opts.needsPassword) ? passwordEl
                   : roomEl;
     focusEl.focus();
   };
+
+  // --- Use join code: swap this dialog for the join code dialog ---
+  joinCodeBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await window.closeModal(dialog);
+    window.openJoinCodeDialog();
+  });
 
   // --- Validation: enable Connect only when required fields are non-empty ---
   function validate() {
