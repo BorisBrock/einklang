@@ -117,10 +117,9 @@
       <article>
         <h3>Use Join Code</h3>
 
-        <p id="join-code-error" class="dialog-error" style="display: none;"></p>
-
         <label for="join-code-input">Paste the join code you were given</label>
-        <textarea id="join-code-input" rows="3" placeholder="Join code" autocomplete="off" spellcheck="false"></textarea>
+        <textarea id="join-code-input" rows="3" placeholder="Join code" autocomplete="off" spellcheck="false" aria-describedby="join-code-status"></textarea>
+        <p id="join-code-status" class="join-code-status" aria-live="polite" hidden></p>
 
         <footer>
           <button class="secondary" id="join-code-cancel-btn">Cancel</button>
@@ -288,13 +287,8 @@
 
         <label for="welcome-join-code">Join code <small>(optional)</small></label>
         <p class="welcome-field-desc">Got one from a friend? Paste it here to join their room right away.</p>
-        <p id="welcome-join-code-error" class="dialog-error" style="display: none;"></p>
-        <input type="text" id="welcome-join-code" placeholder="Join code" autocomplete="off" spellcheck="false" />
-
-        <p class="welcome-hint">
-          Add servers and rooms with the <strong>+</strong> button on the left.
-          Everything else — themes, speakers, voice activation — is in <strong>Settings</strong>.
-        </p>
+        <input type="text" id="welcome-join-code" placeholder="Join code" autocomplete="off" spellcheck="false" aria-describedby="welcome-join-code-status" />
+        <p id="welcome-join-code-status" class="join-code-status" aria-live="polite" hidden></p>
 
         <footer>
           <button id="welcome-ok-btn">Get started</button>

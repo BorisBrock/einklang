@@ -19,14 +19,14 @@ To make a home-hosted server reachable from the internet:
 
 ## Inviting friends with a join code
 
-Instead of telling everyone the address, port, room and password, hand out a **join code**. Open [`tools/join-code-generator.html`](../tools/join-code-generator.html) in any browser (it is a single self-contained file that works offline), fill in the four fields and copy the code. Your friends click **+** → **Use join code…** in the client, paste it and press **Connect**.
+Instead of telling everyone the address, port, room and password, hand out a **join code**. Open [`tools/join-code-generator.html`](../tools/join-code-generator.html) in any browser (it is a single self-contained file that works offline), fill in the four fields and copy the code. Your friends click **+** → **Use join code…** in the client, paste it and press **Connect**. While pasting or typing, the client shows right away whether the code is valid (green, with the room and server it points to) or broken (red).
 
-A code for an IPv4 address with the default port and no password is only 13 characters long, e.g. `vkua27kaRHNgo`. The code contains the password in a recoverable form, so share it as carefully as the password itself.
+A code for an IPv4 address with the default port and no password is only 15 characters long, e.g. `56Go2jvoLWBH132`. The code contains the password in a recoverable form, so share it as carefully as the password itself.
 
 <details>
 <summary>How the code is built</summary>
 
-Each field becomes a series of digits in its own base: an IPv4 octet is one base-256 digit, a hostname character one base-40 digit (lowercase, digits, `-._` and space), other text uses printable ASCII (base 95) or falls back to UTF-8 bytes. All digits are combined into a single big integer in mixed radix and written in Base58 (no `0`, `O`, `I` or `l`, so the code double-click-selects as one word). The default port and an empty password are stored as zero digits at the most significant end, where they cost nothing. A version number and an 8-bit checksum catch typos and codes from newer versions.
+Each field becomes a series of digits in its own base: an IPv4 octet is one base-256 digit, a hostname character one base-40 digit (lowercase, digits, `-._` and space), other text uses printable ASCII (base 95) or falls back to UTF-8 bytes. All digits are combined into a single big integer in mixed radix and written in Base58 (no `0`, `O`, `I` or `l`, so the code double-click-selects as one word). The default port and an empty password are stored as zero digits at the most significant end, where they cost nothing. A version number and a 16-bit checksum catch typos, truncated codes and codes from newer versions. Codes from older clients, which used an 8-bit checksum (version 0), are still accepted.
 
 </details>
 

@@ -1355,6 +1355,41 @@ dialog article footer .dlg-footer-start {
   word-break: break-all;
 }
 
+/* Live check under a join code field: valid (green) or broken (red) */
+.join-code-status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.join-code-status[hidden] {
+  display: none;
+}
+
+.join-code-status::before {
+  flex: none;
+  font-weight: 700;
+}
+
+.join-code-status.valid {
+  color: var(--success);
+}
+
+.join-code-status.valid::before {
+  content: "\2713";
+}
+
+.join-code-status.invalid {
+  color: var(--danger);
+}
+
+.join-code-status.invalid::before {
+  content: "\2717";
+}
+
 .dialog-error {
   color: var(--danger);
   background: var(--danger-soft);
@@ -1396,6 +1431,10 @@ dialog input[readonly] {
 
 /* ----- Welcome dialog (first start) ----- */
 
+#welcome-dialog article {
+  width: 34rem;
+}
+
 .welcome-intro {
   display: flex;
   flex-direction: column;
@@ -1428,25 +1467,12 @@ dialog input[readonly] {
 
 #welcome-dialog select {
   font-size: 0.9rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 
 #welcome-join-code {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-
-#welcome-dialog .dialog-error {
-  margin: 0 0 0.4rem;
-}
-
-#welcome-dialog .welcome-hint {
-  margin: 0.25rem 0 0;
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-muted);
-  background: var(--accent-soft);
+  margin-bottom: 0;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

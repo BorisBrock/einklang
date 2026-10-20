@@ -10,9 +10,9 @@
 // the most significant digits, trailing zeros cost nothing: the default port
 // and an empty password don't make the code any longer.
 //
-// Symbol layout (version 0), least significant first:
+// Symbol layout (version 1), least significant first:
 //   version   radix 4
-//   checksum  radix 256    FNV-1a of the decoded fields, catches typos
+//   checksum  radix 65536  FNV-1a of the decoded fields, catches typos
 //   host      radix 3 type (0 = IPv4: 4 x 256, 1 = IPv6: 8 x 65536, 2 = string)
 //   room      string
 //   port      radix 2 flag (0 = default port), else radix 65536
@@ -24,12 +24,15 @@
 //   1: printable ASCII              (95 symbols, 6.6 bits per character)
 //   2: UTF-8 bytes                  (256 symbols, the fallback)
 //
+// Version 0 codes are identical except for a radix-256 checksum. They are
+// still accepted, but new codes always use the stronger version 1 checksum.
+//
 // This file is shared with tools/join-code-generator.html, which carries an
 // identical copy between its JOINCODE BEGIN/END markers (checked by a test).
 // ---------------------------------------------------------------------------
 
 const JoinCode = (() => {
-  const VERSION        = 0;
+  const VERSION        = 1;
   const DEFAULT_PORT   = 24816;
   const BASE58         = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   const MAX_STRING_LEN = 31 + 4095;
@@ -152,11 +155,15 @@ const JoinCode = (() => {
 
   // --- Checksum ---
 
-  function checksum(host, port, room, password) {
+  // Checksum radix per version: 8 bits in version 0, 16 bits from version 1 on
+  const CHECKSUM_RADIX = [256, 65536];
+
+  function checksum(version, host, port, room, password) {
     const bytes = new TextEncoder().encode([host, port, room, password].join("\n"));
     let h = 0x811c9dc5;
     for (const b of bytes) h = Math.imul(h ^ b, 0x01000193) >>> 0;
-    return (h ^ (h >>> 8) ^ (h >>> 16) ^ (h >>> 24)) & 0xff;
+    if (version === 0) return (h ^ (h >>> 8) ^ (h >>> 16) ^ (h >>> 24)) & 0xff;
+    return (h ^ (h >>> 16)) & 0xffff;
   }
 
   // --- Base58 ---
@@ -194,7 +201,7 @@ const JoinCode = (() => {
     const host = parseHost(address);
     const w = new Writer();
     w.put(VERSION, 4);
-    w.put(checksum(host.text, port, room, password), 256);
+    w.put(checksum(VERSION, host.text, port, room, password), CHECKSUM_RADIX[VERSION]);
 
     w.put(host.type, 3);
     if (host.type === HOST_IPV4) host.value.forEach((o) => w.put(o, 256));
@@ -220,8 +227,9 @@ const JoinCode = (() => {
 
     try {
       const r = new Reader(n);
-      if (r.get(4) !== VERSION) throw invalid();
-      const check = r.get(256);
+      const version = r.get(4);
+      if (version > VERSION) throw invalid();
+      const check = r.get(CHECKSUM_RADIX[version]);
 
       let address;
       const hostType = r.get(3);
@@ -235,7 +243,7 @@ const JoinCode = (() => {
 
       // Every digit must be accounted for and the checksum must match
       if (r.n !== 0n || !address || !room || port < 1 ||
-          check !== checksum(address, port, room, password)) {
+          check !== checksum(version, address, port, room, password)) {
         throw invalid();
       }
       return { address, port, room, password };

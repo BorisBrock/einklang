@@ -8,7 +8,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const userNameEl  = document.getElementById("welcome-username");
   const inputSelect = document.getElementById("welcome-input-select");
   const joinCodeEl  = document.getElementById("welcome-join-code");
-  const errorEl     = document.getElementById("welcome-join-code-error");
+  const statusEl    = document.getElementById("welcome-join-code-status");
   const okBtn       = document.getElementById("welcome-ok-btn");
 
   if (!dialog) return;
@@ -47,26 +47,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   userNameEl.addEventListener("input", validate);
 
-  function showError(message) {
-    errorEl.textContent = message;
-    errorEl.style.display = message ? "block" : "none";
-    joinCodeEl.setAttribute("aria-invalid", message ? "true" : "false");
-  }
-  joinCodeEl.addEventListener("input", () => showError(""));
+  const checkJoinCode = window.watchJoinCode(joinCodeEl, statusEl);
 
   async function finish() {
     if (okBtn.disabled) return;
 
-    // Check the join code first, so a typo keeps the dialog open
-    let joinCode = null;
-    if (joinCodeEl.value.trim()) {
-      try {
-        joinCode = JoinCode.decode(joinCodeEl.value);
-      } catch (err) {
-        showError(err.message);
-        joinCodeEl.focus();
-        return;
-      }
+    // Check the join code first, so a broken code keeps the dialog open
+    const joinCode = checkJoinCode();
+    if (joinCodeEl.value.trim() && !joinCode) {
+      joinCodeEl.focus();
+      return;
     }
 
     okBtn.disabled = true; // no second connect from a double click

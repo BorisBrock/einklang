@@ -55,7 +55,11 @@ for (const [input, expected] of cases) {
 }
 
 // The common case should stay short
-assert(JoinCode.encode({ address: "192.168.1.20", room: "lobby" }).length <= 14);
+assert(JoinCode.encode({ address: "192.168.1.20", room: "lobby" }).length <= 15);
+
+// Version 0 codes (8-bit checksum) handed out by older clients still work
+assert.deepStrictEqual(JoinCode.decode("vkua27kaRHNgo"),
+  { address: "192.168.1.20", port: 24816, room: "lobby", password: "" });
 
 // --- Canonical host (used to match rooms to an already known server) ---
 
@@ -71,8 +75,8 @@ assert.throws(() => JoinCode.encode({ address: "a", room: "a", port: 0 }));
 assert.throws(() => JoinCode.encode({ address: "a", room: "a", port: 65536 }));
 for (const bad of ["", "hello world", "0OIl", "1"]) assert.throws(() => JoinCode.decode(bad));
 
-// Nearly all single-character typos must be detected (the 8-bit checksum
-// lets about 1 in 256 through, the structural checks catch most of those)
+// Single-character typos must be detected (the 16-bit checksum lets about
+// 1 in 65536 through, the structural checks catch most of those)
 const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const sample = JoinCode.encode({ address: "game.example.com", port: 5000, room: "Squad", password: "pw" });
 let typos = 0, undetected = 0;
@@ -83,6 +87,6 @@ for (let i = 0; i < sample.length; i++) {
     try { JoinCode.decode(sample.slice(0, i) + c + sample.slice(i + 1)); undetected++; } catch {}
   }
 }
-assert(undetected / typos < 0.01, undetected + " of " + typos + " typos went undetected");
+assert(undetected / typos < 0.001, undetected + " of " + typos + " typos went undetected");
 
 console.log("JoinCodeTest passed");

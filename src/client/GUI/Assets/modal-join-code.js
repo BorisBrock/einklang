@@ -4,25 +4,56 @@
 // dialog, so the user can review it before connecting.
 // ---------------------------------------------------------------------------
 
+// Checks a join code field while the user types or pastes into it and shows
+// the result in statusEl: green with the decoded room and server, or red if
+// the code is broken. Returns a function that re-checks the field and gives
+// back the decoded code, or null if the field is empty or the code is broken.
+window.watchJoinCode = (inputEl, statusEl) => {
+  function check() {
+    const text = inputEl.value.trim();
+    let joinCode = null;
+    if (text) {
+      try {
+        joinCode = JoinCode.decode(text);
+      } catch { /* shown as broken below */ }
+    }
+
+    statusEl.hidden = !text;
+    statusEl.classList.toggle("valid", !!joinCode);
+    statusEl.classList.toggle("invalid", !!text && !joinCode);
+    if (joinCode) {
+      const server = joinCode.address.includes(":") ? "[" + joinCode.address + "]" : joinCode.address;
+      const port   = joinCode.port === JoinCode.DEFAULT_PORT ? "" : ":" + joinCode.port;
+      statusEl.textContent = "Valid code for room \u201c" + joinCode.room + "\u201d on " + server + port;
+    } else {
+      statusEl.textContent = text ? "Not a valid join code \u2014 check for typos or missing characters" : "";
+    }
+
+    if (text) inputEl.setAttribute("aria-invalid", joinCode ? "false" : "true");
+    else inputEl.removeAttribute("aria-invalid");
+    return joinCode;
+  }
+
+  inputEl.addEventListener("input", check);
+  return check;
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const dialog    = document.getElementById("join-code-dialog");
   const inputEl   = document.getElementById("join-code-input");
   const applyBtn  = document.getElementById("join-code-apply-btn");
   const cancelBtn = document.getElementById("join-code-cancel-btn");
-  const errorEl   = document.getElementById("join-code-error");
+  const statusEl  = document.getElementById("join-code-status");
 
   if (!dialog) return;
+
+  const check = window.watchJoinCode(inputEl, statusEl);
 
   window.openJoinCodeDialog = () => {
     inputEl.value = "";
     window.showModal("join-code-dialog");
     inputEl.focus();
   };
-
-  function showError(message) {
-    errorEl.textContent = message;
-    errorEl.style.display = message ? "block" : "none";
-  }
 
   // Closes this dialog and goes back to the Connect dialog
   async function back(joinCode) {
@@ -31,16 +62,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function apply() {
-    try {
-      back(JoinCode.decode(inputEl.value));
-    } catch (err) {
-      showError(err.message);
-    }
+    const joinCode = check();
+    if (joinCode) back(joinCode);
   }
 
+  // Only a valid code can be applied
   inputEl.addEventListener("input", () => {
-    showError("");
-    applyBtn.disabled = inputEl.value.trim().length === 0;
+    applyBtn.disabled = !check();
   });
 
   // Enter applies the code instead of adding a newline
@@ -53,10 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Reset form state whenever the dialog is opened
   dialog.addEventListener("toggle", () => {
-    if (dialog.open) {
-      showError("");
-      applyBtn.disabled = true;
-    }
+    if (dialog.open) applyBtn.disabled = !check();
   });
 
   applyBtn.addEventListener("click", (e) => {
