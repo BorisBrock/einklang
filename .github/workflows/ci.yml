@@ -24,7 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Ubuntu's apt CMake (3.28) is too old for saucer; the Windows image's
+      # CMake already matches its Visual Studio version.
       - name: Set up CMake
+        if: runner.os == 'Linux'
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.31.x'

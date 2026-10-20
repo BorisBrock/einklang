@@ -90,11 +90,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.31.x'
-
       - name: Configure
         run: cmake -S . -B build -DEINKLANG_BUILD_CLIENT=ON -DEINKLANG_BUILD_TESTS=ON
 
