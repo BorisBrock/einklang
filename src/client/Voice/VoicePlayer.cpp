@@ -4,12 +4,14 @@
 #include <miniaudio.h>
 
 #include "VoicePlayer.h"
+#include "AudioDevicesInternal.h"
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <mutex>
 #include <print>
 
 #include "../../common/SpscRingBuffer.h"
@@ -72,6 +74,17 @@ struct VoicePlayer::Impl
   std::atomic<float> volume{1.0f};
   OutputTap          tap;
 
+  // Selected output device name (empty = system default).  Start() may run
+  // on a different thread than the settings dialog, hence the mutex.
+  std::mutex  deviceNameMutex;
+  std::string deviceName;
+
+  // True if the selected device was unavailable at Start() and the system
+  // default was opened instead.  Control thread only.
+  bool onFallback{false};
+
+  AudioDevices::DeviceHealth health;
+
   SenderSlot* SlotFor(std::uint32_t senderId, std::int64_t nowUs)
   {
     SenderSlot* freeSlot = nullptr;
@@ -116,6 +129,7 @@ static void playbackCallback(ma_device* pDevice, void* pOutput,
 {
   auto* impl   = static_cast<VoicePlayer::Impl*>(pDevice->pUserData);
   auto* output = static_cast<float*>(pOutput);
+  impl->health.OnDataCallback();
   const std::size_t requested    = frameCount;
   const std::size_t channelCount = pDevice->playback.channels;
   const std::int64_t nowUs       = NowUs();
@@ -175,6 +189,14 @@ static void playbackCallback(ma_device* pDevice, void* pOutput,
 
 // ---------------------------------------------------------------------------
 // Public API
+// Device state changes (backend thread).  Only flags the change; the device
+// is reopened from a control thread via PollDeviceEvent().
+static void playbackNotification(const ma_device_notification* pNotification)
+{
+  auto* impl = static_cast<VoicePlayer::Impl*>(pNotification->pDevice->pUserData);
+  impl->health.OnNotification(pNotification->type);
+}
+
 // ---------------------------------------------------------------------------
 VoicePlayer::VoicePlayer()
   : mImpl(std::make_unique<Impl>())
@@ -234,15 +256,48 @@ bool VoicePlayer::Start(bool headless)
   config.performanceProfile          = ma_performance_profile_low_latency;
   config.noPreSilencedOutputBuffer   = MA_TRUE; // the callback always writes every sample
   config.dataCallback                = playbackCallback;
+  config.notificationCallback        = playbackNotification;
   config.pUserData                   = mImpl.get();
 
-  if (ma_device_init(context, &config, &mImpl->device) != MA_SUCCESS)
+  std::string deviceName;
+  if (!headless)
   {
-    std::println("[Voice] Failed to initialise playback device.");
-    return false;
+    std::lock_guard lock(mImpl->deviceNameMutex);
+    deviceName = mImpl->deviceName;
   }
+
+  // Prefer the selected device, but fall back to the system default if it
+  // is gone or refuses to open, so voice keeps working.
+  ma_device_id deviceId{};
+  bool initialised = false;
+  if (!deviceName.empty())
+  {
+    if (AudioDevices::FindDeviceId(ma_device_type_playback, deviceName, deviceId))
+    {
+      config.playback.pDeviceID = &deviceId;
+      initialised = ma_device_init(context, &config, &mImpl->device) == MA_SUCCESS;
+      if (!initialised)
+        std::println("[Voice] Failed to open output device '{}'; using system default.", deviceName);
+    }
+    else
+    {
+      std::println("[Voice] Output device '{}' not found; using system default.", deviceName);
+    }
+  }
+
+  if (!initialised)
+  {
+    config.playback.pDeviceID = nullptr;
+    if (ma_device_init(context, &config, &mImpl->device) != MA_SUCCESS)
+    {
+      std::println("[Voice] Failed to initialise playback device.");
+      return false;
+    }
+  }
+  mImpl->onFallback = !deviceName.empty() && !initialised;
   mImpl->deviceInitialised = true;
 
+  mImpl->health.OnStarting();
   if (ma_device_start(&mImpl->device) != MA_SUCCESS)
   {
     std::println("[Voice] Failed to start playback device.");
@@ -264,6 +319,7 @@ void VoicePlayer::Stop()
   if (!mImpl->deviceInitialised)
     return;
 
+  mImpl->health.OnStopping();
   ma_device_uninit(&mImpl->device); // stops the device and joins its thread
   mImpl->deviceInitialised = false;
   mImpl->playing = false;
@@ -282,6 +338,38 @@ void VoicePlayer::Stop()
 
   mImpl->ResetSenders();
   std::println("[Voice] Playback stopped.");
+}
+
+bool VoicePlayer::SetDeviceName(std::string name)
+{
+  std::lock_guard lock(mImpl->deviceNameMutex);
+  if (mImpl->deviceName == name)
+    return false;
+  mImpl->deviceName = std::move(name);
+  return true;
+}
+
+std::string VoicePlayer::DeviceName() const
+{
+  std::lock_guard lock(mImpl->deviceNameMutex);
+  return mImpl->deviceName;
+}
+
+bool VoicePlayer::IsPlaying() const
+{
+  return mImpl->playing;
+}
+
+bool VoicePlayer::IsOnFallbackDevice() const
+{
+  return mImpl->playing && mImpl->onFallback;
+}
+
+AudioDevices::DeviceEvent VoicePlayer::PollDeviceEvent()
+{
+  if (!mImpl->playing)
+    return AudioDevices::DeviceEvent::None;
+  return mImpl->health.Poll();
 }
 
 void VoicePlayer::PushPacket(std::uint32_t senderId, std::uint32_t seq,

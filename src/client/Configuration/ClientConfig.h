@@ -35,6 +35,12 @@ struct ClientConfig
       float inputGain{1.0f};          // microphone gain (0.0 – 2.0)
       float outputVolume{1.0f};       // playback volume (0.0 – 1.0)
 
+      // Audio devices by name; empty = system default. A device that is not
+      // present at startup (e.g. unplugged headset) falls back to the default
+      // but stays selected, so it is used again once it is back.
+      std::string inputDevice;
+      std::string outputDevice;
+
       // Adaptive VAD settings.
       // The hard minimum RMS floor (the minimum energy required to ever open
       // the gate, even against a noisy noise floor). 0.005 is a good default;

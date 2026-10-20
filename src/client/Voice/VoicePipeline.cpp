@@ -1,7 +1,9 @@
 #include "VoicePipeline.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <print>
 #include <string>
 #include <vector>
@@ -10,6 +12,7 @@
 #include "../Configuration/ClientConfig.h"
 #include "../Networking/ClientPacketFactory.h"
 #include "../Networking/EnetClient.h"
+#include "AudioDevices.h"
 #include "VoiceCapture.h"
 #include "VoiceEncoder.h"
 #include "VoicePlayer.h"
@@ -44,6 +47,7 @@ void VoicePipeline::ApplyConfig(const ClientConfig& config)
   SetVadZcrRange(config.vadZcrMin, config.vadZcrMax);
   SetNoiseFilter(config.noiseFilter);
   SetInputGain(config.inputGain);
+  SetAudioDevices(config.inputDevice, config.outputDevice);
   std::println("[Voice] Config applied — vol: {:.2f}, vad floor: {:.4f}, snr: {:.2f}, atk: {}, rel: {}, zcr: [{:.0f}, {:.0f}], noise filter: {}, input gain: {:.2f}.",
                config.outputVolume, config.vadMinRmsFloor, config.vadSnrFactor,
                config.vadAttackFrames, config.vadReleaseFrames,
@@ -100,6 +104,7 @@ bool VoicePipeline::Init()
 
 bool VoicePipeline::Start()
 {
+  std::lock_guard deviceLock(mDeviceMutex);
   if (mRunning)
     return true;
 
@@ -166,6 +171,8 @@ bool VoicePipeline::Start()
     return false;
   }
 
+  mInputWatch  = {};
+  mOutputWatch = {};
   mRunning = true;
   std::println("[Voice] Pipeline started.");
   return true;
@@ -173,6 +180,7 @@ bool VoicePipeline::Start()
 
 void VoicePipeline::Stop()
 {
+  std::lock_guard deviceLock(mDeviceMutex);
   if (!mRunning)
     return;
 
@@ -202,6 +210,134 @@ void VoicePipeline::Stop()
   mCaptureDrop.store(0);
   mRunning = false;
   std::println("[Voice] Pipeline stopped.");
+}
+
+void VoicePipeline::SetAudioDevices(const std::string& inputDevice, const std::string& outputDevice)
+{
+  std::lock_guard deviceLock(mDeviceMutex);
+  const bool inputChanged  = mCapture->SetDeviceName(inputDevice);
+  const bool outputChanged = mPlayer->SetDeviceName(outputDevice);
+  if (inputChanged)
+    mInputWatch = {};
+  if (outputChanged)
+    mOutputWatch = {};
+  if (!mRunning)
+    return;
+
+  if (inputChanged && !mWavSource)
+  {
+    mCapture->Stop();
+    if (!mCapture->Start())
+      std::println("[Voice] Warning: failed to restart capture on the new input device.");
+  }
+
+  if (outputChanged && !mWavRecorder)
+  {
+    mPlayer->Stop();
+    if (!mPlayer->Start())
+      std::println("[Voice] Warning: failed to restart playback on the new output device.");
+  }
+}
+
+namespace
+{
+// One side (input or output) of VoicePipeline::CheckAudioDevices().
+// `isConnected` reports whether a named device is currently present, or
+// nullopt if the device list could not be read.
+template <typename Device, typename IsConnected>
+void CheckDevice(Device& device, bool running, const char* kind, bool& selectedWasPresent,
+                 bool retryDue, IsConnected&& isConnected)
+{
+  const std::string selected = device.DeviceName();
+
+  auto reopen = [&]()
+  {
+    device.Stop();
+    if (!device.Start())
+      std::println("[Voice] Warning: failed to reopen the {} device; will retry.", kind);
+  };
+
+  if (!running)
+  {
+    // A previous (re)open failed, e.g. no device at all: retry now and then.
+    if (retryDue)
+    {
+      std::println("[Voice] {} device is not running; retrying.", kind);
+      reopen();
+    }
+    return;
+  }
+
+  switch (device.PollDeviceEvent())
+  {
+  case AudioDevices::DeviceEvent::Lost:
+    std::println("[Voice] {} device '{}' stopped unexpectedly (disconnected?); reopening.",
+                 kind, selected.empty() ? "system default" : selected);
+    reopen(); // falls back to the system default if the device is gone
+    selectedWasPresent = !selected.empty() && !device.IsOnFallbackDevice();
+    return;
+  case AudioDevices::DeviceEvent::Rerouted:
+    std::println("[Voice] {} device was rerouted by the system.", kind);
+    break;
+  case AudioDevices::DeviceEvent::None:
+    break;
+  }
+
+  if (selected.empty())
+    return;
+
+  // Some backends never report a removed device (see DeviceHealth), so also
+  // compare against the device list.
+  const std::optional<bool> connected = isConnected(selected);
+  if (!connected)
+    return;
+  const bool present = *connected;
+  if (!device.IsOnFallbackDevice() && !present)
+  {
+    std::println("[Voice] {} device '{}' was disconnected; switching to the system default.",
+                 kind, selected);
+    reopen();
+  }
+  else if (device.IsOnFallbackDevice() && present && !selectedWasPresent)
+  {
+    std::println("[Voice] {} device '{}' is connected again; switching back to it.",
+                 kind, selected);
+    reopen();
+  }
+  selectedWasPresent = present;
+}
+} // namespace
+
+void VoicePipeline::CheckAudioDevices()
+{
+  std::lock_guard deviceLock(mDeviceMutex);
+  if (!mRunning)
+    return;
+
+  // Retry a device that failed to open every 5th check (~10 s).
+  const bool retryDue = ++mDeviceCheckCount % 5 == 0;
+
+  // Enumerate at most once per check, and only if a named device is selected.
+  std::optional<AudioDevices::DeviceList> devices;
+  auto isConnected = [&devices](bool input)
+  {
+    return [&devices, input](const std::string& name) -> std::optional<bool>
+    {
+      if (!devices)
+        devices = AudioDevices::Enumerate();
+      if (devices->inputs.empty() && devices->outputs.empty())
+        return std::nullopt; // enumeration failed; don't mistake it for an unplug
+      const auto& list = input ? devices->inputs : devices->outputs;
+      return std::ranges::any_of(list, [&](const auto& d) { return d.name == name; });
+    };
+  };
+
+  if (!mWavSource)
+    CheckDevice(*mCapture, mCapture->IsCapturing(), "Input", mInputWatch.selectedWasPresent,
+                retryDue, isConnected(true));
+  if (!mWavRecorder)
+    CheckDevice(*mPlayer, mPlayer->IsPlaying(), "Output", mOutputWatch.selectedWasPresent,
+                retryDue, isConnected(false));
 }
 
 bool VoicePipeline::IsRunning() const

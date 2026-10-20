@@ -1,6 +1,9 @@
 #include <algorithm>
+#include <condition_variable>
 #include <format>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 #include <saucer/smartview.hpp>
 #include <saucer/embedded/all.hpp>
@@ -254,6 +257,30 @@ int WebUI::Run()
                                         static_cast<float>(gain));
     });
 
+    // {"inputs":[...],"outputs":[...],"selectedInput":"...","selectedOutput":"..."}
+    // The selected names may be missing from the lists if a device is unplugged.
+    webview->expose("get_audio_devices", [this]() -> std::string {
+      const auto& cfg = mConfigManager.Get();
+      std::string json = mViewModel.GetAudioDevicesJson();
+      json.pop_back(); // strip the closing brace to append the selection
+      json += std::format(R"(,"selectedInput":"{}","selectedOutput":"{}"}})",
+                          JsUtils::EscapeString(cfg.inputDevice),
+                          JsUtils::EscapeString(cfg.outputDevice));
+      return json;
+    });
+
+    webview->expose("apply_audio_devices", [this](std::string input, std::string output) {
+      mViewModel.HandleSetAudioDevices(std::move(input), std::move(output));
+    });
+
+    webview->expose("save_audio_devices", [this](std::string input, std::string output) {
+      auto& cfg = mConfigManager.Get();
+      cfg.inputDevice  = input;
+      cfg.outputDevice = output;
+      mConfigManager.Save();
+      mViewModel.HandleSetAudioDevices(std::move(input), std::move(output));
+    });
+
     webview->expose("get_user_name", [this]() -> std::string {
       return mConfigManager.Get().userName;
     });
@@ -353,6 +380,18 @@ int WebUI::Run()
     // Signal that the WebView2 STA context is now established so that
     // subscribers (e.g. VoiceConnector) can safely call into WASAPI/COM.
     mViewModel.onReady.emit();
+
+    // Drive onTick: the helper thread only posts, so subscribers run on the
+    // GUI thread.  Stopped and joined when this coroutine frame unwinds.
+    std::jthread ticker([this, app](std::stop_token stop)
+    {
+      std::mutex mutex;
+      std::condition_variable_any cv;
+      std::unique_lock lock(mutex);
+      while (!cv.wait_for(lock, stop, WebViewModel::kTickInterval, [] { return false; }) &&
+             !stop.stop_requested())
+        app->post([this] { mViewModel.onTick.emit(); });
+    });
 
     co_await app->finish();
   };

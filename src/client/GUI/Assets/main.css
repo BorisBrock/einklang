@@ -1487,6 +1487,26 @@ dialog input[readonly] {
   color: var(--text-faint);
 }
 
+/* Second and later section titles within the same panel */
+.settings-section-title-spaced {
+  margin-top: 1.4rem;
+}
+
+#settings-dialog select {
+  margin-bottom: 0;
+}
+
+/* Shown when a saved audio device is currently unavailable */
+.settings-device-warning {
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
 /* One setting: header row (label + value) above its control */
 .settings-field {
   padding: 0.85rem 0;

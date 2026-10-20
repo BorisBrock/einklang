@@ -238,3 +238,7 @@ Both configurations:
 4. Use the **Debug toolbar** (or keyboard shortcuts) to step, continue, inspect variables, and view the call stack
 
 > **Tip:** The **Debug Console** (`Ctrl+Shift+Y`) accepts GDB/MI commands directly while a session is paused.
+
+## License
+
+Einklang is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.

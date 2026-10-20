@@ -9,6 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const meterThresh  = document.getElementById("level-meter-threshold");
   const themeGrid    = document.getElementById("theme-grid");
   const userNameEl   = document.getElementById("profile-username");
+  const inputSelect  = document.getElementById("audio-input-select");
+  const outputSelect = document.getElementById("audio-output-select");
+  const deviceWarnEl = document.getElementById("audio-device-warning");
   const navItems     = dialog ? dialog.querySelectorAll(".settings-nav-item") : [];
   const panels       = dialog ? dialog.querySelectorAll(".settings-panel") : [];
 
@@ -65,6 +68,61 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     themeGrid.appendChild(card);
   });
+
+  // ---------------------------------------------------------------------------
+  // Audio devices: "" = system default.  A saved device that is currently
+  // missing (e.g. unplugged headset) stays selectable and is flagged, so the
+  // choice survives until it is back; meanwhile the backend uses the default.
+  // ---------------------------------------------------------------------------
+  function fillDeviceSelect(select, devices, selected) {
+    select.replaceChildren();
+
+    const def = devices.find(d => d.isDefault);
+    const defOpt = document.createElement("option");
+    defOpt.value = "";
+    defOpt.textContent = def ? "System default (" + def.name + ")" : "System default";
+    select.appendChild(defOpt);
+
+    devices.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.name;
+      opt.textContent = d.name;
+      select.appendChild(opt);
+    });
+
+    const missing = selected !== "" && !devices.some(d => d.name === selected);
+    if (missing) {
+      const opt = document.createElement("option");
+      opt.value = selected;
+      opt.textContent = selected + " (not connected)";
+      opt.dataset.missing = "true";
+      select.appendChild(opt);
+    }
+    select.value = selected;
+    return missing;
+  }
+
+  function updateDeviceWarning() {
+    const missing = [inputSelect, outputSelect]
+      .map(sel => sel.selectedOptions[0])
+      .filter(opt => opt && opt.dataset.missing === "true")
+      .map(opt => opt.value);
+    deviceWarnEl.hidden = missing.length === 0;
+    deviceWarnEl.textContent = missing.length === 0 ? "" :
+      "Not connected: " + missing.join(", ") +
+      ". Using the system default until it is available again.";
+  }
+
+  function applyDevicesLive() {
+    updateDeviceWarning();
+    if (window.saucer?.exposed?.apply_audio_devices) {
+      window.saucer.exposed.apply_audio_devices(inputSelect.value, outputSelect.value)
+        .catch(() => {});
+    }
+  }
+
+  inputSelect.addEventListener("change", applyDevicesLive);
+  outputSelect.addEventListener("change", applyDevicesLive);
 
   // ---------------------------------------------------------------------------
   // Scale helpers
@@ -137,6 +195,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let savedGain  = 1.0;
   let savedTheme = getCurrentTheme();
   let savedUserName = "";
+  let savedInputDevice  = "";
+  let savedOutputDevice = "";
 
   // ---------------------------------------------------------------------------
   // Dialog lifecycle
@@ -163,6 +223,18 @@ document.addEventListener("DOMContentLoaded", () => {
           savedGain  = s.inputGain;
         }
       } catch { /* use defaults */ }
+
+      let devices = { inputs: [], outputs: [] };
+      try {
+        if (window.saucer?.exposed?.get_audio_devices) {
+          devices = JSON.parse(await window.saucer.exposed.get_audio_devices());
+          savedInputDevice  = devices.selectedInput  || "";
+          savedOutputDevice = devices.selectedOutput || "";
+        }
+      } catch { /* keep previous selection */ }
+      fillDeviceSelect(inputSelect,  devices.inputs,  savedInputDevice);
+      fillDeviceSelect(outputSelect, devices.outputs, savedOutputDevice);
+      updateDeviceWarning();
 
       vadSlider.value  = vadToSlider(savedVad);
       gainSlider.value = gainToSlider(savedGain);
@@ -197,6 +269,11 @@ document.addEventListener("DOMContentLoaded", () => {
       window.saucer.exposed.apply_voice_settings(savedVad, savedGain)
         .catch(() => {});
     }
+    if ((inputSelect.value !== savedInputDevice || outputSelect.value !== savedOutputDevice) &&
+        window.saucer?.exposed?.apply_audio_devices) {
+      window.saucer.exposed.apply_audio_devices(savedInputDevice, savedOutputDevice)
+        .catch(() => {});
+    }
     applyTheme(savedTheme);
     window.closeModal(dialog);
   }
@@ -221,6 +298,11 @@ document.addEventListener("DOMContentLoaded", () => {
     e.stopPropagation();
     if (window.saucer?.exposed?.save_voice_settings) {
       window.saucer.exposed.save_voice_settings(currentVad(), currentGain())
+        .catch(() => {});
+    }
+    if ((inputSelect.value !== savedInputDevice || outputSelect.value !== savedOutputDevice) &&
+        window.saucer?.exposed?.save_audio_devices) {
+      window.saucer.exposed.save_audio_devices(inputSelect.value, outputSelect.value)
         .catch(() => {});
     }
     if (getCurrentTheme() !== savedTheme) saveTheme(getCurrentTheme());

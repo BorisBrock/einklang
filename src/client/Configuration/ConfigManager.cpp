@@ -55,6 +55,10 @@ bool ConfigManager::Load()
       mConfig.inputGain = node["input-gain"].as<float>();
     if (node["output-volume"])
       mConfig.outputVolume = node["output-volume"].as<float>();
+    if (node["input-device"])
+      mConfig.inputDevice = node["input-device"].as<std::string>();
+    if (node["output-device"])
+      mConfig.outputDevice = node["output-device"].as<std::string>();
     if (node["vad-snr-factor"])
       mConfig.vadSnrFactor = node["vad-snr-factor"].as<float>();
     if (node["vad-attack-frames"])
@@ -110,6 +114,8 @@ bool ConfigManager::Save() const
     root["voice-enabled"]            = mConfig.voiceEnabled;
     root["input-gain"]               = mConfig.inputGain;
     root["output-volume"]            = mConfig.outputVolume;
+    root["input-device"]             = mConfig.inputDevice;
+    root["output-device"]            = mConfig.outputDevice;
     root["vad-snr-factor"]           = mConfig.vadSnrFactor;
     root["vad-attack-frames"]        = mConfig.vadAttackFrames;
     root["vad-release-frames"]       = mConfig.vadReleaseFrames;

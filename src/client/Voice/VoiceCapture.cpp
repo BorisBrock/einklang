@@ -2,12 +2,14 @@
 #include <miniaudio.h>
 
 #include "VoiceCapture.h"
+#include "AudioDevicesInternal.h"
 
 #include <atomic>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 #include <print>
 #include <vector>
 
@@ -27,6 +29,17 @@ struct VoiceCapture::Impl
   bool             deviceInitialised{false};
   bool             capturing{false};
   std::atomic<bool> muted{false};
+
+  // Selected input device name (empty = system default).  Start() may run on
+  // a different thread than the settings dialog, hence the mutex.
+  std::mutex       deviceNameMutex;
+  std::string      deviceName;
+
+  // True if the selected device was unavailable at Start() and the system
+  // default was opened instead.  Control thread only.
+  bool             onFallback{false};
+
+  AudioDevices::DeviceHealth health;
 
   // Legacy compatibility: maps to adaptive VAD minimum RMS floor.
   // Adaptive VAD tunables.
@@ -73,7 +86,10 @@ static void captureCallback(ma_device* pDevice, void* /*pOutput*/,
                             const void* pInput, ma_uint32 frameCount)
 {
   auto* impl = static_cast<VoiceCapture::Impl*>(pDevice->pUserData);
-  if (!impl || !impl->frameCallback)
+  if (!impl)
+    return;
+  impl->health.OnDataCallback();
+  if (!impl->frameCallback)
     return;
 
   const bool muted = impl->muted.load(std::memory_order_relaxed);
@@ -155,6 +171,14 @@ static void captureCallback(ma_device* pDevice, void* /*pOutput*/,
   }
 }
 
+// Device state changes (backend thread).  Only flags the change; the device
+// is reopened from a control thread via PollDeviceEvent().
+static void captureNotification(const ma_device_notification* pNotification)
+{
+  if (auto* impl = static_cast<VoiceCapture::Impl*>(pNotification->pDevice->pUserData))
+    impl->health.OnNotification(pNotification->type);
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -190,22 +214,57 @@ bool VoiceCapture::Start()
     config.capture.format   = ma_format_f32;
     config.capture.channels = Voice::kChannels;
     config.sampleRate       = Voice::kSampleRate;
-    config.dataCallback     = captureCallback;
-    config.pUserData        = mImpl;
+    config.dataCallback         = captureCallback;
+    config.notificationCallback = captureNotification;
+    config.pUserData            = mImpl;
 
-    if (ma_device_init(nullptr, &config, &mImpl->device) != MA_SUCCESS)
+    std::string deviceName;
     {
-      std::println("[Voice] Failed to initialise capture device.");
-      return false;
+      std::lock_guard lock(mImpl->deviceNameMutex);
+      deviceName = mImpl->deviceName;
     }
 
+    // Prefer the selected device, but fall back to the system default if it
+    // is gone or refuses to open, so voice keeps working.
+    ma_device_id deviceId{};
+    bool initialised = false;
+    if (!deviceName.empty())
+    {
+      if (AudioDevices::FindDeviceId(ma_device_type_capture, deviceName, deviceId))
+      {
+        config.capture.pDeviceID = &deviceId;
+        initialised = ma_device_init(nullptr, &config, &mImpl->device) == MA_SUCCESS;
+        if (!initialised)
+          std::println("[Voice] Failed to open input device '{}'; using system default.", deviceName);
+      }
+      else
+      {
+        std::println("[Voice] Input device '{}' not found; using system default.", deviceName);
+      }
+    }
+
+    if (!initialised)
+    {
+      config.capture.pDeviceID = nullptr;
+      if (ma_device_init(nullptr, &config, &mImpl->device) != MA_SUCCESS)
+      {
+        std::println("[Voice] Failed to initialise capture device.");
+        return false;
+      }
+    }
+
+    mImpl->onFallback = !deviceName.empty() && !initialised;
     mImpl->deviceInitialised = true;
-    std::println("[Voice] Capture device initialised ({}Hz, mono).", Voice::kSampleRate);
+    std::println("[Voice] Capture device initialised ({}, {}Hz, mono).",
+                 mImpl->device.capture.name, Voice::kSampleRate);
   }
 
+  mImpl->health.OnStarting();
   if (ma_device_start(&mImpl->device) != MA_SUCCESS)
   {
     std::println("[Voice] Failed to start capture device.");
+    ma_device_uninit(&mImpl->device);
+    mImpl->deviceInitialised = false;
     return false;
   }
 
@@ -222,6 +281,7 @@ void VoiceCapture::Stop()
   if (!mImpl->deviceInitialised || !mImpl->capturing)
     return;
 
+  mImpl->health.OnStopping();
   ma_device_stop(&mImpl->device);
   ma_device_uninit(&mImpl->device);   // release the WASAPI/COM resources
   mImpl->deviceInitialised = false;
@@ -232,6 +292,33 @@ void VoiceCapture::Stop()
 bool VoiceCapture::IsCapturing() const
 {
   return mImpl && mImpl->capturing;
+}
+
+bool VoiceCapture::SetDeviceName(std::string name)
+{
+  std::lock_guard lock(mImpl->deviceNameMutex);
+  if (mImpl->deviceName == name)
+    return false;
+  mImpl->deviceName = std::move(name);
+  return true;
+}
+
+std::string VoiceCapture::DeviceName() const
+{
+  std::lock_guard lock(mImpl->deviceNameMutex);
+  return mImpl->deviceName;
+}
+
+bool VoiceCapture::IsOnFallbackDevice() const
+{
+  return mImpl->capturing && mImpl->onFallback;
+}
+
+AudioDevices::DeviceEvent VoiceCapture::PollDeviceEvent()
+{
+  if (!mImpl->capturing)
+    return AudioDevices::DeviceEvent::None;
+  return mImpl->health.Poll();
 }
 
 void VoiceCapture::SetFrameCallback(FrameCallback cb)

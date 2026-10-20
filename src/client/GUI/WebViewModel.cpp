@@ -126,6 +126,37 @@ float WebViewModel::GetInputRms() const
   return mInputRmsGetter ? mInputRmsGetter() : 0.0f;
 }
 
+void WebViewModel::HandleSetAudioDevices(std::string inputDevice, std::string outputDevice)
+{
+  onAudioDevicesChanged.emit(std::move(inputDevice), std::move(outputDevice));
+}
+
+void WebViewModel::SetAudioDeviceEnumerator(std::function<AudioDevices::DeviceList()> fn)
+{
+  mAudioDeviceEnumerator = std::move(fn);
+}
+
+std::string WebViewModel::GetAudioDevicesJson() const
+{
+  const auto list = mAudioDeviceEnumerator ? mAudioDeviceEnumerator() : AudioDevices::DeviceList{};
+
+  auto toJson = [](const std::vector<AudioDevices::DeviceInfo>& devices)
+  {
+    std::string json = "[";
+    for (std::size_t i = 0; i < devices.size(); ++i)
+    {
+      if (i > 0)
+        json += ",";
+      json += std::format(R"({{"name":"{}","isDefault":{}}})",
+                          JsUtils::EscapeString(devices[i].name), devices[i].isDefault);
+    }
+    json += "]";
+    return json;
+  };
+
+  return std::format(R"({{"inputs":{},"outputs":{}}})", toJson(list.inputs), toJson(list.outputs));
+}
+
 void WebViewModel::HandleSwitchToRoom(std::string address, uint16_t port, std::string roomName)
 {
   CancelReconnectForUserAction();

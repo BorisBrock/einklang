@@ -178,7 +178,26 @@
             </section>
 
             <section class="settings-panel" data-section="audio" hidden>
-              <h4 class="settings-section-title">Microphone</h4>
+              <h4 class="settings-section-title">Devices</h4>
+              <p class="settings-section-hint">System default follows whatever your OS has selected.</p>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label for="audio-input-select">Input device</label>
+                </div>
+                <select id="audio-input-select"></select>
+              </div>
+
+              <div class="settings-field">
+                <div class="settings-field-head">
+                  <label for="audio-output-select">Output device</label>
+                </div>
+                <select id="audio-output-select"></select>
+              </div>
+
+              <p id="audio-device-warning" class="settings-device-warning" hidden></p>
+
+              <h4 class="settings-section-title settings-section-title-spaced">Microphone</h4>
               <p class="settings-section-hint">Changes are applied live while the dialog is open.</p>
 
               <div class="settings-field">

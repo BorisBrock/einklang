@@ -4,6 +4,9 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <string>
+
+#include "AudioDevices.h"
 
 // Plays back voice received from remote peers using miniaudio.
 //
@@ -30,6 +33,24 @@ public:
   // delivered to the output tap (used for -capture <file>).
   bool Start(bool headless = false);
   void Stop();
+
+  // Select the output device by name; empty = system default.  Takes effect
+  // on the next Start().  If the device is not present at that point (e.g. an
+  // unplugged headset), the system default is used instead.
+  // Returns true if the selection changed.
+  bool SetDeviceName(std::string name);
+  std::string DeviceName() const;
+
+  bool IsPlaying() const;
+
+  // True while playing on the system default because the selected device
+  // was unavailable at Start().
+  bool IsOnFallbackDevice() const;
+
+  // Reports whether the running device was lost (e.g. unplugged) or rerouted
+  // since the last call.  Call periodically from a control thread, never
+  // from the audio thread; on Lost, Stop() + Start() reopens a device.
+  AudioDevices::DeviceEvent PollDeviceEvent();
 
   // Queue an encoded packet from a remote sender.  Must only be called from
   // one thread (the network thread).  Never blocks.

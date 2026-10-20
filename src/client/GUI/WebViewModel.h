@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -13,6 +14,7 @@
 #include "../../common/ChatMessage.h"
 #include "../../common/ServerStatus.h"
 #include "../Configuration/ClientConfig.h"
+#include "../Voice/AudioDevices.h"
 
 // Holds all GUI-relevant state and acts as the hub between the JavaScript
 // front-end and the rest of the C++ application.
@@ -119,6 +121,17 @@ public:
   void  SetInputRmsGetter(std::function<float()> fn);
   float GetInputRms() const;
 
+  // Called when the settings dialog selects audio devices (empty = default).
+  void HandleSetAudioDevices(std::string inputDevice, std::string outputDevice);
+
+  // Register a callable that enumerates the available audio devices (set by
+  // the VoiceConnector, like the RMS getter).
+  void SetAudioDeviceEnumerator(std::function<AudioDevices::DeviceList()> fn);
+
+  // Returns the available devices as JSON:
+  // {"inputs":[{"name","isDefault"}],"outputs":[...]}
+  std::string GetAudioDevicesJson() const;
+
   // Called when the user clicks a known room in the list to switch into it.
   // address/port identify the server; the profile user name is used.
   void HandleSwitchToRoom(std::string address, uint16_t port, std::string roomName);
@@ -165,6 +178,10 @@ public:
   // Args: vadThreshold, inputGain
   Event<float, float>                                      onVoiceSettingsChanged;
 
+  // Fired when the settings dialog selects audio devices.
+  // Args: inputDevice, outputDevice (empty = system default)
+  Event<std::string, std::string>                          onAudioDevicesChanged;
+
   // Fired whenever the set of known rooms changes (added, removed or edited).
   Event<>                                                  onKnownRoomsChanged;
 
@@ -208,6 +225,12 @@ public:
   // STA apartment established by saucer/WebView2 is already in place.
   Event<> onReady;
 
+  // Fired every kTickInterval on the GUI thread, starting after onReady, for
+  // periodic housekeeping that must run inside the message loop (e.g. the
+  // audio device watchdog).
+  Event<> onTick;
+  static constexpr auto kTickInterval = std::chrono::seconds(2);
+
 private:
   // Leaves the reconnecting state; returns true if it was reconnecting.
   bool EndReconnect();
@@ -239,4 +262,7 @@ private:
 
   // Optional getter for the microphone input RMS level.
   std::function<float()> mInputRmsGetter;
+
+  // Optional audio device enumerator.
+  std::function<AudioDevices::DeviceList()> mAudioDeviceEnumerator;
 };

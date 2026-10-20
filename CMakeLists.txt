@@ -254,6 +254,7 @@ add_executable(EinklangClientApp WIN32
     src/client/GUI/WebUI.cpp
     src/client/GUI/WebViewModel.cpp
     src/client/Configuration/ConfigManager.cpp
+    src/client/Voice/AudioDevices.cpp
     src/client/Voice/VoiceCapture.cpp
     src/client/Voice/VoiceEncoder.cpp
     src/client/Voice/VoiceDecoder.cpp

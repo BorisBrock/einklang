@@ -4,6 +4,7 @@
 
 #include "../GUI/WebViewModel.h"
 #include "../Networking/EnetClient.h"
+#include "../Voice/AudioDevices.h"
 #include "../Voice/VoicePipeline.h"
 
 void VoiceConnector::Connect(WebViewModel& viewModel, EnetClient& enetClient,
@@ -12,6 +13,7 @@ void VoiceConnector::Connect(WebViewModel& viewModel, EnetClient& enetClient,
   // Provide the view model with a way to poll the microphone input RMS level
   // for the live level-meter in the settings dialog.
   viewModel.SetInputRmsGetter([&voicePipeline]() { return voicePipeline.GetInputRms(); });
+  viewModel.SetAudioDeviceEnumerator([]() { return AudioDevices::Enumerate(); });
 
   if (!voiceEnabled)
   {
@@ -63,6 +65,25 @@ void VoiceConnector::Connect(WebViewModel& viewModel, EnetClient& enetClient,
       voicePipeline.SetInputGain(inputGain);
       std::println("[Voice] Settings updated \u2014 VAD threshold: {:.4f}, input gain: {:.2f}.",
                    vadThreshold, inputGain);
+    });
+
+  // Switch audio devices selected in the settings dialog
+  viewModel.onAudioDevicesChanged.subscribe(
+    [&voicePipeline](const std::string& inputDevice, const std::string& outputDevice)
+    {
+      voicePipeline.SetAudioDevices(inputDevice, outputDevice);
+      std::println("[Voice] Devices selected \u2014 input: {}, output: {}.",
+                   inputDevice.empty() ? "system default" : inputDevice,
+                   outputDevice.empty() ? "system default" : outputDevice);
+    });
+
+  // Recover from devices disappearing at runtime (e.g. an unplugged
+  // headset): falls back to the system default and switches back once the
+  // selected device returns.  Runs on the GUI thread, like Start().
+  viewModel.onTick.subscribe(
+    [&voicePipeline]()
+    {
+      voicePipeline.CheckAudioDevices();
     });
 
   // Mark users as speaking in the GUI when remote voice frames decode.

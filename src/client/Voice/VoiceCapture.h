@@ -6,9 +6,10 @@
 #include <vector>
 #include <atomic>
 
+#include "AudioDevices.h"
 #include "VoiceActivityDetector.h"
 
-// Captures PCM audio from the default input device using miniaudio.
+// Captures PCM audio from an input device using miniaudio.
 // Delivers fixed-size frames (960 samples @ 48 kHz mono = 20 ms) via a
 // callback on the audio thread.
 class VoiceCapture
@@ -32,6 +33,22 @@ public:
   void Stop();
 
   bool IsCapturing() const;
+
+  // Select the input device by name; empty = system default.  Takes effect
+  // on the next Start().  If the device is not present at that point (e.g. an
+  // unplugged headset), the system default is used instead.
+  // Returns true if the selection changed.
+  bool SetDeviceName(std::string name);
+  std::string DeviceName() const;
+
+  // True while capturing from the system default because the selected
+  // device was unavailable at Start().
+  bool IsOnFallbackDevice() const;
+
+  // Reports whether the running device was lost (e.g. unplugged) or rerouted
+  // since the last call.  Call periodically from a control thread, never
+  // from the audio thread; on Lost, Stop() + Start() reopens a device.
+  AudioDevices::DeviceEvent PollDeviceEvent();
 
   // Set the callback that receives complete PCM frames.
   void SetFrameCallback(FrameCallback cb);

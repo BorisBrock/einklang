@@ -12,6 +12,10 @@ voice-enabled: true  # set to false to fully disable client voice chat
 input-gain: 1.0      # microphone gain (0.0 – 2.0)
 output-volume: 1.0   # playback volume (0.0 – 1.0)
 
+# Audio devices by name, as shown in Settings > Audio. Empty = system default.
+input-device: ""
+output-device: ""
+
 # VAD (Voice Activity Detection) — adaptive gate that opens when speech is detected.
 #
 # vad-min-rms-floor: hard minimum energy required before the gate can ever open.

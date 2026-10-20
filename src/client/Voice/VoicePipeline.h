@@ -56,6 +56,19 @@ public:
 
   bool IsRunning() const;
 
+  // Select the input/output devices by name (empty = system default).  If
+  // the pipeline is running, only the affected device is reopened, so an
+  // active voice session continues.  Ignored for the side replaced by a
+  // -playback / -capture file.
+  void SetAudioDevices(const std::string& inputDevice, const std::string& outputDevice);
+
+  // Watchdog for runtime device changes; call every ~2 s while the app runs,
+  // from the thread that may open audio devices (the GUI thread), never from
+  // an audio callback.  Reopens a device that stopped unexpectedly (e.g. an
+  // unplugged headset), which falls back to the system default, and switches
+  // back once the selected device is connected again.
+  void CheckAudioDevices();
+
   // Called by the VoiceConnector when a voice frame arrives from the server.
   void HandleIncomingVoiceFrame(const std::uint8_t* data, std::size_t size);
 
@@ -124,6 +137,19 @@ private:
 
   std::uint32_t mSequenceNumber{0};
   bool          mRunning{false};
+
+  // Serialises Start/Stop and device switches, which may be triggered from
+  // the network thread, the settings dialog and the device watchdog.
+  std::mutex mDeviceMutex;
+
+  // Device watchdog state (see CheckAudioDevices).
+  struct DeviceWatch
+  {
+    bool selectedWasPresent{true}; // switch back only when it (re)appears
+  };
+  DeviceWatch mInputWatch;
+  DeviceWatch mOutputWatch;
+  unsigned    mDeviceCheckCount{0};
 
   // Local user name — written from the main thread (SetLocalUserName),
   // read from the encoder worker thread.  Protected by mLocalUserNameMutex.
