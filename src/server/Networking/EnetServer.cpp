@@ -28,7 +28,7 @@ bool EnetServer::Start(uint16_t port, std::size_t maxConnections)
     return false;
   }
 
-  ENetAddress address;
+  ENetAddress address{}; // sin6_scope_id must be 0, or Windows refuses the bind
   address.host = ENET_HOST_ANY;
   address.port = port;
 
