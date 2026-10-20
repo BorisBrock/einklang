@@ -89,6 +89,20 @@ public:
   // Remove all known rooms for a server; disconnects if the active room is on it.
   void HandleRemoveServer(std::string address, uint16_t port);
 
+  // Change address/port/user name of all known rooms on a server; disconnects
+  // if the active room is on it. Returns the updated room list as JSON.
+  std::string HandleEditServer(const std::string& oldAddress, uint16_t oldPort,
+                               const std::string& newAddress, uint16_t newPort,
+                               const std::string& userName);
+
+  // Applies a server edit to a room list (shared by the view-model and the
+  // persisted config). Rooms that would collide with an existing room on the
+  // target server are dropped. Returns true if anything changed.
+  static bool EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
+                              const std::string& oldAddress, uint16_t oldPort,
+                              const std::string& newAddress, uint16_t newPort,
+                              const std::string& userName);
+
   // --- Events: VM → C++  (Connectors subscribe to these) ---
 
   Event<std::string>                                        onChatMessageSubmitted;

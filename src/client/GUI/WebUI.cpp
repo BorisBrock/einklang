@@ -279,6 +279,23 @@ int WebUI::Run()
       mViewModel.HandleRemoveServer(std::move(address), static_cast<uint16_t>(port));
     });
 
+    webview->expose("edit_server", [this](std::string oldAddress, int oldPort,
+                                          std::string newAddress, int newPort,
+                                          std::string userName) -> std::string {
+      if (newAddress.empty() || newPort < 1 || newPort > 65535 || userName.size() > 64)
+        return mViewModel.GetKnownRoomsJson();
+
+      // Update persisted config first
+      auto& cfg = mConfigManager.Get();
+      if (WebViewModel::EditServerRooms(cfg.knownRooms, oldAddress, static_cast<uint16_t>(oldPort),
+                                        newAddress, static_cast<uint16_t>(newPort), userName))
+        mConfigManager.Save();
+
+      // Update the view-model (fires onActiveRoomLeft if the active room was on this server)
+      return mViewModel.HandleEditServer(oldAddress, static_cast<uint16_t>(oldPort),
+                                         newAddress, static_cast<uint16_t>(newPort), userName);
+    });
+
     window->show();
 
     // Signal that the WebView2 STA context is now established so that

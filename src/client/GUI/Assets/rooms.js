@@ -298,26 +298,38 @@ function _ensureContextMenu() {
   document.body.appendChild(_ctxMenu);
 }
 
-function _showContextMenu(x, y, label, callback) {
+const _CTX_ICON_REMOVE =
+  '<line x1="18" y1="6" x2="6" y2="18"/>' +
+  '<line x1="6" y1="6" x2="18" y2="18"/>';
+
+const _CTX_ICON_EDIT =
+  '<path d="M12 20h9"/>' +
+  '<path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
+
+// items: [{ label, icon, danger, callback }]
+function _showContextMenu(x, y, items) {
   _ensureContextMenu();
   _ctxMenu.innerHTML = "";
 
-  const item = document.createElement("div");
-  item.className = "ctx-menu-item ctx-menu-item--danger";
-  item.innerHTML =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" ' +
-    'fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
-    'stroke-linejoin="round" aria-hidden="true" class="ctx-menu-icon">'
-    + '<line x1="18" y1="6" x2="6" y2="18"/>'
-    + '<line x1="6" y1="6" x2="18" y2="18"/>'
-    + '</svg>'
-    + '<span>' + label + '</span>';
-  item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    _hideContextMenu();
-    callback();
-  });
-  _ctxMenu.appendChild(item);
+  for (const entry of items) {
+    const item = document.createElement("div");
+    item.className = "ctx-menu-item" + (entry.danger ? " ctx-menu-item--danger" : "");
+    item.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" ' +
+      'fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true" class="ctx-menu-icon">'
+      + entry.icon
+      + '</svg>';
+    const label = document.createElement("span");
+    label.textContent = entry.label;
+    item.appendChild(label);
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      _hideContextMenu();
+      entry.callback();
+    });
+    _ctxMenu.appendChild(item);
+  }
 
   // Keep the menu inside the viewport
   _ctxMenu.style.left    = x + "px";
@@ -380,14 +392,17 @@ document.addEventListener("contextmenu", (e) => {
     const port     = parseInt(roomItem.dataset.port, 10);
     const roomName = roomItem.dataset.room;
 
-    _showContextMenu(e.pageX, e.pageY, "Remove Room", async () => {
-      try {
-        await window.saucer.exposed.remove_room(address, port, roomName);
-        _removeRoomItemFromDOM(address, port, roomName);
-      } catch (err) {
-        console.error("remove_room failed:", err);
-      }
-    });
+    _showContextMenu(e.pageX, e.pageY, [{
+      label: "Remove Room", icon: _CTX_ICON_REMOVE, danger: true,
+      callback: async () => {
+        try {
+          await window.saucer.exposed.remove_room(address, port, roomName);
+          _removeRoomItemFromDOM(address, port, roomName);
+        } catch (err) {
+          console.error("remove_room failed:", err);
+        }
+      },
+    }]);
   } else if (serverTitle) {
     e.preventDefault();
     const card    = serverTitle.closest(".server-card");
@@ -396,14 +411,29 @@ document.addEventListener("contextmenu", (e) => {
     const address = key.slice(0, colonIdx);
     const port    = parseInt(key.slice(colonIdx + 1), 10);
 
-    _showContextMenu(e.pageX, e.pageY, "Remove Server", async () => {
-      try {
-        await window.saucer.exposed.remove_server(address, port);
-        _removeServerCardFromDOM(address, port);
-      } catch (err) {
-        console.error("remove_server failed:", err);
-      }
-    });
+    // Pre-fill the user name only when all rooms on the server share one
+    const userNames = new Set(
+      Array.from(card.querySelectorAll(".room-item")).map((el) => el.dataset.userName)
+    );
+    const userName = userNames.size === 1 ? [...userNames][0] : "";
+
+    _showContextMenu(e.pageX, e.pageY, [
+      {
+        label: "Edit Server", icon: _CTX_ICON_EDIT,
+        callback: () => openEditServerDialog(address, port, userName),
+      },
+      {
+        label: "Remove Server", icon: _CTX_ICON_REMOVE, danger: true,
+        callback: async () => {
+          try {
+            await window.saucer.exposed.remove_server(address, port);
+            _removeServerCardFromDOM(address, port);
+          } catch (err) {
+            console.error("remove_server failed:", err);
+          }
+        },
+      },
+    ]);
   }
 });
 

@@ -12,6 +12,7 @@
     <script type="text/javascript" src="chat.js"></script>
     <script type="text/javascript" src="voice.js"></script>
     <script type="text/javascript" src="modal-add-room.js"></script>
+    <script type="text/javascript" src="modal-edit-server.js"></script>
     <script type="text/javascript" src="modal-connection-error.js"></script>
     <script type="text/javascript" src="modal-settings.js"></script>
 
@@ -104,6 +105,36 @@
         <footer>
           <button class="secondary" id="connect-cancel-btn">Cancel</button>
           <button id="connect-btn" disabled>Connect</button>
+        </footer>
+      </article>
+    </dialog>
+
+    <!-- Edit Server Dialog -->
+    <dialog id="edit-server-dialog">
+      <article>
+        <h3>Edit Server</h3>
+
+        <p id="edit-server-error" style="color: var(--del-color); display: none;"></p>
+
+        <!-- Row 1: Server address + Port -->
+        <div class="dlg-row">
+          <div class="dlg-col">
+            <label for="edit-server-address">Server address</label>
+            <input type="text" id="edit-server-address" placeholder="IP address or hostname" autocomplete="off" />
+          </div>
+          <div class="dlg-col dlg-col--narrow">
+            <label for="edit-server-port">Port</label>
+            <input type="number" id="edit-server-port" placeholder="49152" min="1" max="65535" autocomplete="off" />
+          </div>
+        </div>
+
+        <!-- Row 2: User name (applies to every room on this server) -->
+        <label for="edit-server-username">User name <small id="edit-server-username-hint">(used for all rooms on this server)</small></label>
+        <input type="text" id="edit-server-username" placeholder="Your name" autocomplete="off" maxlength="64" />
+
+        <footer>
+          <button class="secondary" id="edit-server-cancel-btn">Cancel</button>
+          <button id="edit-server-save-btn" disabled>Save</button>
         </footer>
       </article>
     </dialog>

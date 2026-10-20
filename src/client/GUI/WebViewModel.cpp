@@ -117,6 +117,74 @@ void WebViewModel::HandleRemoveServer(std::string address, uint16_t port)
   }
 }
 
+std::string WebViewModel::HandleEditServer(const std::string& oldAddress, uint16_t oldPort,
+                                           const std::string& newAddress, uint16_t newPort,
+                                           const std::string& userName)
+{
+  const bool activeWasHere = (mActiveAddress == oldAddress && mActivePort == oldPort);
+
+  const bool changed = EditServerRooms(mKnownRooms, oldAddress, oldPort,
+                                       newAddress, newPort, userName);
+
+  // The current connection uses the old settings — drop it so the next
+  // join uses the edited ones.
+  if (changed && activeWasHere)
+  {
+    mActiveAddress.clear();
+    mActivePort = 0;
+    mActiveRoom.clear();
+    onActiveRoomLeft.emit();
+  }
+
+  return BuildRoomsJson(mKnownRooms);
+}
+
+// static
+bool WebViewModel::EditServerRooms(std::vector<ClientConfig::KnownRoom>& rooms,
+                                   const std::string& oldAddress, uint16_t oldPort,
+                                   const std::string& newAddress, uint16_t newPort,
+                                   const std::string& userName)
+{
+  const bool sameServer = (oldAddress == newAddress && oldPort == newPort);
+  bool changed = false;
+
+  std::vector<ClientConfig::KnownRoom> result;
+  result.reserve(rooms.size());
+
+  for (auto& r : rooms)
+  {
+    const bool onServer = (r.address == oldAddress && r.port == oldPort);
+    if (onServer)
+    {
+      if (!sameServer)
+      {
+        r.address = newAddress;
+        r.port    = newPort;
+        changed   = true;
+      }
+      if (!userName.empty() && r.userName != userName)
+      {
+        r.userName = userName;
+        changed    = true;
+      }
+    }
+
+    // When moving onto a server that is already known, merging can produce
+    // duplicate rooms; keep the first occurrence.
+    const bool duplicate = std::ranges::any_of(result, [&](const ClientConfig::KnownRoom& o)
+    {
+      return o.address == r.address && o.port == r.port && o.roomName == r.roomName;
+    });
+    if (duplicate)
+      continue;
+
+    result.push_back(std::move(r));
+  }
+
+  rooms = std::move(result);
+  return changed;
+}
+
 void WebViewModel::SetActiveRoom(const std::string& address, uint16_t port,
                                  const std::string& roomName)
 {
