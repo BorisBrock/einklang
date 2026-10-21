@@ -82,6 +82,9 @@ jobs:
           name: linux
           path: release/*.AppImage
           if-no-files-found: error
+          # Only handed to the github-release job, which attaches the files
+          # to the release; don't keep a copy in Actions storage.
+          retention-days: 1
 
   windows:
     name: Windows zip
@@ -125,6 +128,9 @@ jobs:
           name: windows
           path: release/*.zip
           if-no-files-found: error
+          # Only handed to the github-release job, which attaches the files
+          # to the release; don't keep a copy in Actions storage.
+          retention-days: 1
 
   docker:
     name: Docker Hub image
